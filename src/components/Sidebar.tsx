@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Camera, Map, MessageSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import { getProfile, type VipProfile } from "../apis/profileApi";
+import type { VipProfile } from "../types/auth";
 
 const menuItems = [
   {
@@ -33,12 +33,18 @@ function Sidebar() {
   });
 
   useEffect(() => {
-    const loadProfile = async () => {
-      const data = await getProfile();
-      setProfile(data);
-    };
+    const userText = localStorage.getItem("vip_user");
 
-    loadProfile();
+    if (!userText) {
+      return;
+    }
+
+    const user = JSON.parse(userText);
+
+    setProfile({
+      name: user.name,
+      roomName: user.roomName,
+    });
   }, []);
 
   return (
