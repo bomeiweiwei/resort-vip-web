@@ -1,0 +1,8 @@
+{
+  "token": "mock-vip-token-123456",
+  "user": {
+    "name": "陳總",
+    "roomName": "海景尊爵套房 801",
+    "role": "VIP"
+  }
+}
