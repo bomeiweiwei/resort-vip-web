@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import { CalendarDays, Camera, Map, MessageSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { getProfile, type VipProfile } from "../apis/profileApi";
 
 const menuItems = [
   {
@@ -25,6 +27,20 @@ const menuItems = [
 ];
 
 function Sidebar() {
+  const [profile, setProfile] = useState<VipProfile>({
+    name: "",
+    roomName: "",
+  });
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      const data = await getProfile();
+      setProfile(data);
+    };
+
+    loadProfile();
+  }, []);
+
   return (
     <aside className="sidebar">
       <div className="brand-area">
@@ -34,8 +50,8 @@ function Sidebar() {
 
       <div className="guest-info">
         <p>歡迎回來</p>
-        <strong>陳總</strong>
-        <span>海景尊爵套房 801</span>
+        <strong>{profile.name}</strong>
+        <span>{profile.roomName}</span>
       </div>
 
       <nav className="side-nav">
