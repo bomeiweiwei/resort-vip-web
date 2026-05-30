@@ -17,21 +17,15 @@ function Header({ title }: HeaderProps) {
 
   return (
     <header className="top-header">
-      <h1>{title}</h1>
+      <div>
+        <h1>{title}</h1>
+        <span className="mobile-header-subtitle">RESORT VIP</span>
+      </div>
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "20px",
-        }}
-      >
-        <button
-          onClick={handleLogout}
-          className="logout-button"
-        >
+      <div className="header-actions">
+        <button onClick={handleLogout} className="logout-button">
           <LogOut size={18} />
-          登出
+          <span>登出</span>
         </button>
 
         <div className="notification">
