@@ -1,73 +1,283 @@
-# React + TypeScript + Vite
+# VIP Resort AI Assistant Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+VIP Resort AI Assistant Web 是一套智慧渡假村會員服務平台前端系統，提供 VIP 旅客個人化旅遊推薦、AI 導覽、景點地圖及智能助理等功能。
 
-Currently, two official plugins are available:
+本專案採用 React + TypeScript 開發，未來將透過 FastAPI 提供後端 API 與 AI 服務。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Technology Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Frontend
 
-## Expanding the ESLint configuration
+* React 19
+* TypeScript
+* Vite
+* React Router DOM
+* Axios
+* Lucide React
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Backend (Planned)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+* FastAPI
+* Python 3.12+
+* Azure API
+* Gemini API
+* RAG
+* Vector Database
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+
+```text
+src/
+├─ apis/
+│  └─ authApi.ts
+│
+├─ components/
+│  ├─ Header.tsx
+│  └─ Sidebar.tsx
+│
+├─ layouts/
+│  └─ MainLayout.tsx
+│
+├─ mocks/
+│  └─ login_success.json
+│
+├─ pages/
+│  ├─ LoginPage.tsx
+│  ├─ AssistantPage.tsx
+│  ├─ ItineraryPage.tsx
+│  ├─ GuidePage.tsx
+│  └─ MapPage.tsx
+│
+├─ routes/
+│  └─ ProtectedRoute.tsx
+│
+├─ types/
+│  └─ auth.ts
+│
+├─ App.tsx
+├─ main.tsx
+└─ index.css
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Features
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Authentication
+
+* Login Page
+* Mock Login API
+* Protected Route
+* Session Storage
+* Logout
+
+### Layout
+
+* Responsive Layout (RWD)
+* Desktop Sidebar Navigation
+* Mobile Bottom Navigation
+* Shared Header Component
+
+### Main Pages
+
+* Smart Assistant
+* Personalized Itinerary
+* AI Tour Guide
+* Resort Map
+
+---
+
+## Environment Variables
+
+### Development
+
+Create:
+
+```text
+.env.development
 ```
+
+Example:
+
+```env
+VITE_USE_MOCK=true
+VITE_PROXY_API=http://localhost:8000
+```
+
+---
+
+## Mock Mode
+
+When:
+
+```env
+VITE_USE_MOCK=true
+```
+
+Frontend uses:
+
+```text
+src/mocks/
+```
+
+instead of backend APIs.
+
+Example:
+
+```typescript
+const useMock =
+  import.meta.env.VITE_USE_MOCK === "true";
+```
+
+---
+
+## Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start development server:
+
+```bash
+npm run dev
+```
+
+Default URL:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## Build
+
+Production build:
+
+```bash
+npm run build
+```
+
+Preview build:
+
+```bash
+npm run preview
+```
+
+---
+
+## Coding Standards
+
+### React
+
+* Functional Components Only
+* React Hooks
+* TypeScript First
+* No Class Components
+
+### Naming
+
+Components:
+
+```text
+PascalCase
+```
+
+Example:
+
+```text
+LoginPage.tsx
+Sidebar.tsx
+```
+
+Functions:
+
+```text
+camelCase
+```
+
+Example:
+
+```typescript
+handleLogin()
+loadProfile()
+```
+
+### API Layer
+
+All API requests must be placed inside:
+
+```text
+src/apis/
+```
+
+UI components should never directly call axios.
+
+Example:
+
+```typescript
+authApi.ts
+profileApi.ts
+itineraryApi.ts
+```
+
+---
+
+## Future Roadmap
+
+### Phase 1
+
+* Login
+* Layout
+* Responsive Design
+
+### Phase 2
+
+* FastAPI Integration
+* User Profile API
+* Resort Recommendation API
+
+### Phase 3
+
+* AI Chat Assistant
+* Azure or Gemini Integration
+* RAG Knowledge Base
+
+### Phase 4
+
+* Image Recognition
+* AI Tour Guide
+* Personalized Recommendation Engine
+
+---
+
+## Git Commit Convention
+
+Examples:
+
+```bash
+feat(frontend): add login page
+
+feat(frontend): implement protected routes
+
+feat(frontend): add responsive layout
+
+refactor(frontend): use authenticated user data in sidebar
+
+fix(frontend): resolve mobile navigation issue
+```
+
+---
+
+## Notes
+
+This project currently uses mock data for frontend development.
+
+Backend integration will be implemented using FastAPI services in future iterations.
