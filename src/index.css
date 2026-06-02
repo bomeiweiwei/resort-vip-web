@@ -583,3 +583,174 @@ a {
     white-space: nowrap;
   }
 }
+
+.itinerary-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.itinerary-hero {
+  background: linear-gradient(135deg, #101828, #2b2f36);
+  color: white;
+  border-radius: 28px;
+  padding: 34px 40px;
+  margin-bottom: 36px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+}
+
+.itinerary-hero h2 {
+  margin: 0 0 12px;
+  font-size: 30px;
+}
+
+.itinerary-hero p {
+  margin: 0 0 24px;
+  color: #cbd5e1;
+  font-size: 17px;
+}
+
+.itinerary-filters {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.itinerary-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 210px;
+  height: 42px;
+  padding: 0 14px;
+
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: #f59e0b;
+}
+
+.itinerary-filter select {
+  flex: 1;
+  border: none;
+  outline: none;
+  color: white;
+  background: transparent;
+  font-size: 16px;
+}
+
+.itinerary-filter option {
+  color: #111827;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 48px;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dbe3ef;
+}
+
+.timeline-row {
+  position: relative;
+  margin-bottom: 28px;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -42px;
+  top: 12px;
+  width: 16px;
+  height: 16px;
+  background: #f59e0b;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+
+.timeline-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+.timeline-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #d97706;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.timeline-card h3 {
+  margin: 0 0 12px;
+  color: #111827;
+  font-size: 22px;
+}
+
+.timeline-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.empty-card {
+  background: white;
+  border-radius: 20px;
+  padding: 28px;
+  color: #64748b;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+@media (max-width: 768px) {
+  .itinerary-page {
+    max-width: none;
+  }
+
+  .itinerary-hero {
+    padding: 26px 22px;
+    border-radius: 22px;
+    margin-bottom: 28px;
+  }
+
+  .itinerary-hero h2 {
+    font-size: 26px;
+  }
+
+  .itinerary-filters {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .itinerary-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .timeline {
+    padding-left: 34px;
+  }
+
+  .timeline::before {
+    left: 10px;
+  }
+
+  .timeline-dot {
+    left: -31px;
+  }
+
+  .timeline-card {
+    padding: 22px;
+  }
+
+  .timeline-card h3 {
+    font-size: 20px;
+  }
+}
