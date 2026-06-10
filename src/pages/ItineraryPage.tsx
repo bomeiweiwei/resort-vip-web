@@ -122,6 +122,28 @@ function ItineraryPage() {
           </div>
         ))}
       </section>
+
+      <section className="itinerary-feedback">
+        <div className="feedback-title">
+          <span>▱</span>
+          <h3>行程修改意見</h3>
+        </div>
+
+        <div className="feedback-input-wrap">
+          <input
+            type="text"
+            placeholder="想調整什麼行程？支援文字與語音"
+          />
+
+          <button type="button" className="voice-button">
+            🎙
+          </button>
+
+          <button type="button" className="send-button">
+            ➤
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
