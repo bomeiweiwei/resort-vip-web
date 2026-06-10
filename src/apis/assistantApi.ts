@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 
 import speechToTextMock from "../mocks/speech_to_text.json";
 import smartHelperMsgMock from "../mocks/smart_helper_msg.json";
@@ -18,8 +18,8 @@ export const recording =
     }
 
     const response =
-      await axios.post<SpeechToTextResponse>(
-        "/api/nlplabs/speech-to-text"
+      await apiClient.post<SpeechToTextResponse>(
+        "/api/assistant/speech-to-text"
       );
 
     return response.data;
@@ -33,8 +33,8 @@ export const sendMsg = async (
   }
 
   const response =
-    await axios.post<SmartHelperResponse>(
-      "/api/nlplabs/smart-helper-msg",
+    await apiClient.post<SmartHelperResponse>(
+      "/api/assistant/send-msg",
       {
         message,
       }

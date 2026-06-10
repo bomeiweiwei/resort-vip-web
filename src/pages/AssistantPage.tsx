@@ -1,28 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mic, Send } from "lucide-react";
 import {
   recording as recordingApi,
   sendMsg as sendMsgApi,
 } from "../apis/assistantApi";
-
-type ChatMessage = {
-  id: number;
-  role: "user" | "assistant";
-  text: string;
-};
+import type { ChatMessage } from "../types/chat_message";
+import type { CustomerProfile } from "../types/auth";
 
 function AssistantPage() {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      role: "assistant",
-      text: "尊榮的 陳總 您好，我是您的專屬智能管家。請問有什麼我可以為您服務的？無論是客房服務、設施預約，或是交通安排，我都在這裡為您處理。",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    const customerProfileText = localStorage.getItem("customer_profile");
+
+    if (!customerProfileText) {
+      return;
+    }
+
+    const customerProfile: CustomerProfile = JSON.parse(customerProfileText);
+
+    setMessages([
+      {
+        id: 1,
+        role: "assistant",
+        text: `尊榮的 ${customerProfile.full_name} 您好，我是您的專屬智能管家。請問有什麼我可以為您服務的？無論是客房服務、設施預約，或是交通安排，我都在這裡為您處理。`,
+      },
+    ]);
+  }, []);
 
   const recording = async () => {
     try {
