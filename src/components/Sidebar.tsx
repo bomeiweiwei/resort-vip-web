@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Camera, Map, MessageSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import type { VipProfile } from "../types/auth";
+import type { CustomerProfile } from "../types/auth";
 
 const menuItems = [
   {
@@ -27,23 +27,28 @@ const menuItems = [
 ];
 
 function Sidebar() {
-  const [profile, setProfile] = useState<VipProfile>({
+  const [profile, setProfile] = useState({
     name: "",
     roomName: "",
   });
 
   useEffect(() => {
-    const userText = localStorage.getItem("vip_user");
+    const profileText = localStorage.getItem("customer_profile");
 
-    if (!userText) {
+    if (!profileText) {
       return;
     }
 
-    const user = JSON.parse(userText);
+    const customerProfile = JSON.parse(profileText) as CustomerProfile;
 
     setProfile({
-      name: user.name,
-      roomName: user.roomName,
+      name: customerProfile.full_name,
+      roomName: [
+        customerProfile.room_type_name,
+        customerProfile.room_no,
+      ]
+        .filter(Boolean)
+        .join(" "),
     });
   }, []);
 
@@ -56,8 +61,8 @@ function Sidebar() {
 
       <div className="guest-info">
         <p>歡迎回來</p>
-        <strong>{profile.name}</strong>
-        <span>{profile.roomName}</span>
+        <strong>{profile.name || "VIP 貴賓"}</strong>
+        <span>{profile.roomName || "尊榮旅客服務"}</span>
       </div>
 
       <nav className="side-nav">

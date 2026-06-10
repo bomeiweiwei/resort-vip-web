@@ -30,17 +30,21 @@ When `VITE_USE_MOCK=true`, API modules import mock JSON directly instead of hitt
 
 ### Routing & Auth
 
-[src/App.tsx](src/App.tsx) defines all routes. The entire app (except `/login`) is wrapped in `ProtectedRoute`, which checks `localStorage.vip_token`. On logout, both `vip_token` and `vip_user` are cleared and the user is redirected to `/login`.
+[src/App.tsx](src/App.tsx) defines all routes. The entire app (except `/login`) is wrapped in `ProtectedRoute`, which checks `localStorage.customer_access_token`. On logout, both `customer_access_token` and `customer_profile` are cleared and the user is redirected to `/login`.
 
 ```
 /login          → LoginPage        (public)
 /               → ProtectedRoute
   /             → redirect → /assistant
-  /assistant    → AssistantPage    (placeholder)
-  /itinerary    → ItineraryPage    (placeholder)
+  /assistant    → AssistantPage    (chat UI with voice recording)
+  /itinerary    → ItineraryPage    (date/preference filtered timeline)
   /guide        → GuidePage        (placeholder)
   /map          → MapPage          (placeholder)
 ```
+
+After login, `LoginResponse` is split into two localStorage entries:
+- `customer_access_token` — the JWT string
+- `customer_profile` — JSON-serialized `CustomerProfile` object
 
 ### Layout
 
@@ -48,34 +52,48 @@ When `VITE_USE_MOCK=true`, API modules import mock JSON directly instead of hitt
 - Desktop: fixed 320px sidebar on the left, main content to the right
 - Mobile: no sidebar; bottom navigation bar (76px) replaces it
 
+`MainLayout` owns a `pageTitles` map keyed by pathname that drives the `Header` title prop.
+
 ### State Management
 
 No external state library. State lives in:
-- **Component-local `useState`** (form inputs, error messages)
-- **`localStorage`** for session persistence (`vip_token`, `vip_user` as JSON)
-- `Sidebar` reads `vip_user` on mount via `useEffect`
+- **Component-local `useState`** (form inputs, chat messages, loading flags)
+- **`localStorage`** for session persistence (`customer_access_token`, `customer_profile` as JSON)
+- `Sidebar` reads `customer_profile` on mount via `useEffect` to display guest name and room
 
 ### API Layer
 
 All HTTP calls must live in `src/apis/`. Components never call Axios directly.
 
-Pattern used in [src/apis/authApi.ts](src/apis/authApi.ts):
+Mock-guard pattern (used consistently in all API files):
 
 ```typescript
 const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
-export async function login(...) {
-  if (useMock) return mockData as LoginResponse;
-  const { data } = await axios.post<LoginResponse>("/api/auth/login", ...);
+export async function someCall(...) {
+  if (useMock) return mockData as SomeType;
+  const { data } = await axios.post<SomeType>("/api/...", ...);
   return data;
 }
 ```
 
-Future API files (`profileApi.ts`, `itineraryApi.ts`, etc.) follow the same mock-guard pattern. Mock data lives in `src/mocks/`.
+Current API files and their backend endpoints:
+
+| File | Endpoint | Method |
+|---|---|---|
+| `authApi.ts` | `/api/auth/login` | POST |
+| `assistantApi.ts` | `/api/nlplabs/speech-to-text` | POST |
+| `assistantApi.ts` | `/api/nlplabs/smart-helper-msg` | POST |
+| `itineraryApi.ts` | `/api/recommends/exclusive-itinerary` | GET |
 
 ### Types
 
-Shared TypeScript types in `src/types/auth.ts` (`VipProfile`, `LoginResponse`). Add new domain types here as features are built.
+Shared TypeScript types live in `src/types/`:
+- `auth.ts` — `LoginRequest`, `LoginResponse`, `CustomerProfile`
+- `assistant.ts` — `SpeechToTextResponse`, `SmartHelperRequest`, `SmartHelperResponse`
+- `itinerary.ts` — `ItinerarySchedule`, `ItineraryDateGroup`
+
+Page-local types (e.g., `ChatMessage` in `AssistantPage`) stay in their component file when not shared.
 
 ## Coding Conventions
 
@@ -90,13 +108,13 @@ Shared TypeScript types in `src/types/auth.ts` (`VipProfile`, `LoginResponse`). 
 
 - React handles UI only
 - FastAPI handles business logic
-- All API calls must go through src/apis
+- All API calls must go through `src/apis/`
 - Components must never call axios directly
 
 ### TypeScript
 
-- Avoid any whenever possible
-- Use shared types under src/types
+- Avoid `any` whenever possible
+- Use shared types under `src/types/`; only keep types local to a component when they are not reused
 - Prefer explicit typing
 
 ### Development
@@ -118,8 +136,10 @@ Planned integrations:
 
 Use Conventional Commits:
 
+```
 feat(frontend):
 fix(frontend):
 refactor(frontend):
 docs(project):
 chore(frontend):
+```

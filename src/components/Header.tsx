@@ -9,8 +9,8 @@ function Header({ title }: HeaderProps) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    localStorage.removeItem("vip_token");
-    localStorage.removeItem("vip_user");
+    localStorage.removeItem("customer_access_token");
+    localStorage.removeItem("customer_profile");
 
     navigate("/login");
   };
@@ -19,11 +19,16 @@ function Header({ title }: HeaderProps) {
     <header className="top-header">
       <div>
         <h1>{title}</h1>
-        <span className="mobile-header-subtitle">RESORT VIP</span>
+        <span className="mobile-header-subtitle">
+          RESORT VIP
+        </span>
       </div>
 
       <div className="header-actions">
-        <button onClick={handleLogout} className="logout-button">
+        <button
+          onClick={handleLogout}
+          className="logout-button"
+        >
           <LogOut size={18} />
           <span>登出</span>
         </button>
