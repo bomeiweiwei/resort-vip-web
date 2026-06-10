@@ -2,10 +2,19 @@ export type ItinerarySchedule = {
   time: string;
   title: string;
   content: string;
-  preference: number;
+  preference: string;
 };
 
 export type ItineraryDateGroup = {
   date: string;
   schedules: ItinerarySchedule[];
+};
+
+export type ItineraryFeedbackRequest = {
+  message: string;
+};
+
+export type ItineraryFeedbackResponse = {
+  success: boolean;
+  message: string;
 };

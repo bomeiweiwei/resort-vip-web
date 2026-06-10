@@ -6,48 +6,25 @@
         "time": "09:00",
         "title": "專屬管家早餐",
         "content": "已安排送至房內，提供中西式精緻餐點。",
-        "preference": 1
+        "preference": "餐飲美食"
       },
       {
         "time": "10:30",
         "title": "預約：私廚料理課程",
         "content": "於園區廚藝教室，由米其林主廚親自指導。",
-        "preference": 2
+        "preference": "餐飲美食"
       },
       {
         "time": "14:00",
         "title": "無邊際泳池包場",
         "content": "您的專屬時段，已備妥香檳與點心。",
-        "preference": 1
+        "preference": "溫泉公園"
       },
       {
         "time": "18:30",
         "title": "海景日落晚宴",
         "content": "為您保留視野最佳的窗邊座位。",
-        "preference": 2
-      }
-    ]
-  },
-  {
-    "date": "2026-05-31",
-    "schedules": [
-      {
-        "time": "08:30",
-        "title": "森林步道晨間導覽",
-        "content": "由專人帶領探索園區秘境森林步道。",
-        "preference": 1
-      },
-      {
-        "time": "11:00",
-        "title": "SPA 放鬆療程",
-        "content": "安排芳療師提供 VIP 專屬舒壓療程。",
-        "preference": 1
-      },
-      {
-        "time": "15:00",
-        "title": "下午茶品酒體驗",
-        "content": "於景觀酒廊享用精選甜點與氣泡酒。",
-        "preference": 2
+        "preference": "餐飲美食"
       }
     ]
   }

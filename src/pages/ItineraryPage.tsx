@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, UserRound } from "lucide-react";
-import { getExclusiveItinerary } from "../apis/itineraryApi";
+import { getExclusiveItinerary, submitFeedback } from "../apis/itineraryApi";
 
 import type {
   ItineraryDateGroup,
@@ -9,16 +9,24 @@ import type {
 
 const preferenceOptions = [
   {
-    value: 0,
+    value: "全部偏好",
     label: "全部偏好",
   },
   {
-    value: 1,
-    label: "休閒放鬆",
+    value: "觀光園區",
+    label: "觀光園區",
   },
   {
-    value: 2,
-    label: "美食體驗",
+    value: "在地文化",
+    label: "在地文化",
+  },
+  {
+    value: "餐飲美食",
+    label: "餐飲美食",
+  },
+  {
+    value: "溫泉公園",
+    label: "溫泉公園",
   },
 ];
 
@@ -28,7 +36,10 @@ function ItineraryPage() {
   >([]);
 
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedPreference, setSelectedPreference] = useState(0);
+  const [selectedPreference, setSelectedPreference] = useState("全部偏好");
+
+  const [feedback, setFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const loadItinerary = async () => {
@@ -51,7 +62,7 @@ function ItineraryPage() {
   const filteredSchedules: ItinerarySchedule[] = useMemo(() => {
     const schedules = selectedDateGroup?.schedules ?? [];
 
-    if (selectedPreference === 0) {
+    if (selectedPreference === "全部偏好") {
       return schedules;
     }
 
@@ -59,6 +70,31 @@ function ItineraryPage() {
       (item) => item.preference === selectedPreference
     );
   }, [selectedDateGroup, selectedPreference]);
+
+  const handleSubmitFeedback = async () => {
+    const text = feedback.trim();
+
+    if (!text) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const result = await submitFeedback(text);
+
+      if (result.success) {
+        console.log(result.message);
+        setFeedback("");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("送出失敗");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
 
   const selectedPreferenceLabel =
     preferenceOptions.find((item) => item.value === selectedPreference)
@@ -90,7 +126,7 @@ function ItineraryPage() {
             <select
               value={selectedPreference}
               onChange={(event) =>
-                setSelectedPreference(Number(event.target.value))
+                setSelectedPreference(event.target.value)
               }
             >
               {preferenceOptions.map((item) => (
@@ -132,6 +168,13 @@ function ItineraryPage() {
         <div className="feedback-input-wrap">
           <input
             type="text"
+            value={feedback}
+            onChange={(event) => setFeedback(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                handleSubmitFeedback();
+              }
+            }}
             placeholder="想調整什麼行程？支援文字與語音"
           />
 
@@ -139,7 +182,12 @@ function ItineraryPage() {
             🎙
           </button>
 
-          <button type="button" className="send-button">
+          <button
+            type="button"
+            className="send-button"
+            onClick={handleSubmitFeedback}
+            disabled={isSubmitting}
+          >
             ➤
           </button>
         </div>
