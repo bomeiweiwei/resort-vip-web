@@ -529,6 +529,25 @@ a {
   color: #64748b;
 }
 
+.icon-button.recording {
+  color: #ff4d4f;
+  animation: recording-pulse 1s infinite;
+}
+
+@keyframes recording-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
 .send-button {
   background: #f59e0b;
   color: #ffffff;

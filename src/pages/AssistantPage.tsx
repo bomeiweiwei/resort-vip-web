@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Mic, Send } from "lucide-react";
 import {
-  recording as recordingApi,
   sendMsg as sendMsgApi,
+  speechToText
 } from "../apis/assistantApi";
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
 
 function AssistantPage() {
   const [message, setMessage] = useState("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
@@ -33,15 +35,42 @@ function AssistantPage() {
   }, []);
 
   const recording = async () => {
-    try {
+    if (!isRecording) {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
+      audioChunksRef.current = [];
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/webm",
+        });
+
+        stream.getTracks().forEach((track) => track.stop());
+
+        const result = await speechToText(audioBlob);
+
+        setMessage(result.text ?? "");
+      };
+
+      mediaRecorder.start();
       setIsRecording(true);
 
-      const result = await recordingApi();
-
-      setMessage(result.text ?? "");
-    } finally {
-      setIsRecording(false);
+      return;
     }
+
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
   };
 
   const sendMsg = async () => {
@@ -112,10 +141,9 @@ function AssistantPage() {
 
           <button
             type="button"
-            className="icon-button"
+            className={`icon-button ${isRecording ? "recording" : ""}`}
             onClick={recording}
-            disabled={isRecording}
-            title="錄音"
+            title={isRecording ? "停止錄音" : "開始錄音"}
           >
             <Mic size={20} />
           </button>
@@ -124,7 +152,7 @@ function AssistantPage() {
             type="button"
             className="send-button"
             onClick={sendMsg}
-            disabled={isSending}
+            disabled={isSending || isRecording}
             title="傳送"
           >
             <Send size={20} />
