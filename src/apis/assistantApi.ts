@@ -37,17 +37,12 @@ export const speechToText = async (
   }
 
   const formData = new FormData();
-  formData.append("file", audioBlob, "recording.webm");
+  formData.append("file", audioBlob, "recording.wav");
 
   const response =
     await apiClient.post<SpeechToTextResponse>(
       "/api/assistant/speech-to-text",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
 
   return response.data;
