@@ -6,6 +6,7 @@ import {
 } from "../apis/assistantApi";
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
+import axios from "axios";
 
 function AssistantPage() {
   const [message, setMessage] = useState("");
@@ -17,6 +18,7 @@ function AssistantPage() {
   const [isSending, setIsSending] = useState(false);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const customerProfileText = localStorage.getItem("customer_profile");
@@ -35,6 +37,12 @@ function AssistantPage() {
       },
     ]);
   }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
 
   const downsampleBuffer = (
     buffer: Float32Array,
@@ -136,29 +144,42 @@ function AssistantPage() {
 
   const recording = async () => {
     if (!isRecording) {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
 
-      const audioContext = new AudioContext();
-      const source = audioContext.createMediaStreamSource(stream);
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-      audioDataRef.current = [];
+        audioDataRef.current = [];
 
-      processor.onaudioprocess = (event) => {
-        const inputData = event.inputBuffer.getChannelData(0);
-        audioDataRef.current.push(new Float32Array(inputData));
-      };
+        processor.onaudioprocess = (event) => {
+          const inputData = event.inputBuffer.getChannelData(0);
+          audioDataRef.current.push(new Float32Array(inputData));
+        };
 
-      source.connect(processor);
-      processor.connect(audioContext.destination);
+        source.connect(processor);
+        processor.connect(audioContext.destination);
 
-      streamRef.current = stream;
-      audioContextRef.current = audioContext;
-      processorRef.current = processor;
+        streamRef.current = stream;
+        audioContextRef.current = audioContext;
+        processorRef.current = processor;
 
-      setIsRecording(true);
+        setIsRecording(true);
+      } catch (error) {
+        console.error("microphone permission error:", error);
+
+        const errorMessage: ChatMessage = {
+          id: Date.now(),
+          role: "assistant",
+          text: "無法啟用麥克風，請確認瀏覽器已允許麥克風權限後再試一次。",
+        };
+
+        setMessages((prev) => [...prev, errorMessage]);
+        setIsRecording(false);
+      }
 
       return;
     }
@@ -197,6 +218,9 @@ function AssistantPage() {
   };
 
   const sendMsg = async () => {
+    if (isSending || isRecording) {
+      return;
+    }
     const text = message.trim();
 
     if (!text) {
@@ -223,6 +247,30 @@ function AssistantPage() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("sendMsg error:", error);
+
+      let errorText = "抱歉，目前系統暫時無法回應，請稍後再試。";
+
+      if (axios.isAxiosError(error)) {
+        if (error.code === "ECONNABORTED") {
+          errorText = "系統回應時間過長，請稍後再試。";
+        } else {
+          errorText =
+            error.response?.data?.message ??
+            error.response?.data?.detail ??
+            error.message ??
+            errorText;
+        }
+      }
+
+      const errorMessage: ChatMessage = {
+        id: Date.now() + 1,
+        role: "assistant",
+        text: errorText,
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsSending(false);
     }
@@ -251,6 +299,7 @@ function AssistantPage() {
             <div className="chat-bubble">{item.text}</div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="chat-input-area">

@@ -20,14 +20,21 @@ apiClient.interceptors.request.use(
   }
 );
 
+let isRedirecting = false;
+
 apiClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (
+      error.response?.status === 401 &&
+      !isRedirecting
+    ) {
+      isRedirecting = true;
+
       localStorage.removeItem("customer_access_token");
       localStorage.removeItem("customer_profile");
+
+      window.location.href = "/login";
     }
 
     return Promise.reject(error);
