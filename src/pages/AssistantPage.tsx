@@ -7,6 +7,9 @@ import {
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
 import axios from "axios";
+import type {
+  AssistantResponse
+} from "../types/assistant";
 
 function AssistantPage() {
   const [message, setMessage] = useState("");
@@ -142,6 +145,18 @@ function AssistantPage() {
     return result;
   };
 
+  const speakText = (
+    text: string,
+    language: AssistantResponse["language"] = "zh-TW"
+  ) => {
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = language;
+
+    window.speechSynthesis.speak(utterance);
+  };
+
   const recording = async () => {
     if (!isRecording) {
       try {
@@ -214,7 +229,18 @@ function AssistantPage() {
 
     const result = await speechToText(wavBlob);
 
-    setMessage(result.text ?? "");
+    const assistantMessage: ChatMessage = {
+      id: Date.now(),
+      role: "assistant",
+      text: result.reply ?? "已收到您的語音需求，我會立即為您處理。",
+    };
+
+    setMessages((prev) => [...prev, assistantMessage]);
+    speakText(assistantMessage.text, result.language);
+
+    // const utterance = new SpeechSynthesisUtterance(assistantMessage.text);
+    // utterance.lang = "zh-TW";
+    // window.speechSynthesis.speak(utterance);
   };
 
   const sendMsg = async () => {

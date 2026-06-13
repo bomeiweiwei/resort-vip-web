@@ -4,8 +4,7 @@ import speechToTextMock from "../mocks/speech_to_text.json";
 import smartHelperMsgMock from "../mocks/smart_helper_msg.json";
 
 import type {
-  SpeechToTextResponse,
-  SmartHelperResponse,
+  AssistantResponse
 } from "../types/assistant";
 
 const useMock =
@@ -13,13 +12,13 @@ const useMock =
 
 export const sendMsg = async (
   message: string
-): Promise<SmartHelperResponse> => {
+): Promise<AssistantResponse> => {
   if (useMock) {
     return smartHelperMsgMock;
   }
 
   const response =
-    await apiClient.post<SmartHelperResponse>(
+    await apiClient.post<AssistantResponse>(
       "/api/assistant/send-msg",
       {
         message,
@@ -31,7 +30,7 @@ export const sendMsg = async (
 
 export const speechToText = async (
   audioBlob: Blob
-): Promise<SpeechToTextResponse> => {
+): Promise<AssistantResponse> => {
   if (useMock) {
     return speechToTextMock;
   }
@@ -40,7 +39,7 @@ export const speechToText = async (
   formData.append("file", audioBlob, "recording.wav");
 
   const response =
-    await apiClient.post<SpeechToTextResponse>(
+    await apiClient.post<AssistantResponse>(
       "/api/assistant/speech-to-text",
       formData
     );
