@@ -219,6 +219,12 @@ function AssistantPage() {
     );
 
     const wavBlob = encodeWav(downsampledAudioData, 16000);
+    // console.log("chunks:", audioDataRef.current.length);
+    // console.log("wav size:", wavBlob.size);
+    // console.log("duration seconds:", downsampledAudioData.length / 16000);
+
+    // const audioUrl = URL.createObjectURL(wavBlob);
+    // console.log("recording url:", audioUrl);
 
     await audioContext.close();
 
