@@ -251,13 +251,19 @@ function AssistantPage() {
 
       const result = await speechToText(wavBlob);
 
-      const assistantMessage: ChatMessage = {
+      const userMessage: ChatMessage = {
         id: Date.now(),
+        role: "user",
+        text: result.text ?? "",
+      };
+
+      const assistantMessage: ChatMessage = {
+        id: Date.now() + 1,
         role: "assistant",
         text: result.reply ?? "已收到您的語音需求，我會立即為您處理。",
       };
 
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
       await playTextToSpeech(assistantMessage.text, result.language);
 
       
