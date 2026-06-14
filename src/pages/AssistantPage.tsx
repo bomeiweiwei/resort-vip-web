@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { Mic, Send } from "lucide-react";
 import {
   sendMsg as sendMsgApi,
-  speechToText
+  speechToText,
+  textToSpeech,
 } from "../apis/assistantApi";
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
@@ -145,16 +146,24 @@ function AssistantPage() {
     return result;
   };
 
-  const speakText = (
+  const playTextToSpeech = async (
     text: string,
     language: AssistantResponse["language"] = "zh-TW"
   ) => {
-    window.speechSynthesis.cancel();
+    const audioBlob = await textToSpeech(text, language);
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language;
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
 
-    window.speechSynthesis.speak(utterance);
+    audio.onended = () => {
+      URL.revokeObjectURL(audioUrl);
+    };
+
+    audio.onerror = () => {
+      URL.revokeObjectURL(audioUrl);
+    };
+
+    await audio.play();
   };
 
   const recording = async () => {
@@ -249,7 +258,7 @@ function AssistantPage() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-      speakText(assistantMessage.text, result.language);
+      await playTextToSpeech(assistantMessage.text, result.language);
 
       
       // const utterance = new SpeechSynthesisUtterance(assistantMessage.text);
