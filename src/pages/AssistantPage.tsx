@@ -2,7 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { Mic, Send } from "lucide-react";
 import {
   sendMsg as sendMsgApi,
-  speechToText
+  speechToText,
+  textToSpeech,
 } from "../apis/assistantApi";
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
@@ -19,7 +20,7 @@ function AssistantPage() {
   const audioDataRef = useRef<Float32Array[]>([]);
   const [isRecording, setIsRecording] = useState(false);
   const [isSending, setIsSending] = useState(false);
-
+  const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -145,19 +146,30 @@ function AssistantPage() {
     return result;
   };
 
-  const speakText = (
+  const playTextToSpeech = async (
     text: string,
     language: AssistantResponse["language"] = "zh-TW"
   ) => {
-    window.speechSynthesis.cancel();
+    const audioBlob = await textToSpeech(text, language);
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language;
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
 
-    window.speechSynthesis.speak(utterance);
+    audio.onended = () => {
+      URL.revokeObjectURL(audioUrl);
+    };
+
+    audio.onerror = () => {
+      URL.revokeObjectURL(audioUrl);
+    };
+
+    await audio.play();
   };
 
   const recording = async () => {
+    if (isSending) {
+      return;
+    }
     if (!isRecording) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -219,6 +231,12 @@ function AssistantPage() {
     );
 
     const wavBlob = encodeWav(downsampledAudioData, 16000);
+    // console.log("chunks:", audioDataRef.current.length);
+    // console.log("wav size:", wavBlob.size);
+    // console.log("duration seconds:", downsampledAudioData.length / 16000);
+
+    // const audioUrl = URL.createObjectURL(wavBlob);
+    // console.log("recording url:", audioUrl);
 
     await audioContext.close();
 
@@ -227,20 +245,53 @@ function AssistantPage() {
     streamRef.current = null;
     audioDataRef.current = [];
 
-    const result = await speechToText(wavBlob);
+    try {
+      setIsSending(true);
+      setIsThinking(true);
 
-    const assistantMessage: ChatMessage = {
-      id: Date.now(),
-      role: "assistant",
-      text: result.reply ?? "已收到您的語音需求，我會立即為您處理。",
-    };
+      const result = await speechToText(wavBlob);
 
-    setMessages((prev) => [...prev, assistantMessage]);
-    speakText(assistantMessage.text, result.language);
+      const assistantMessage: ChatMessage = {
+        id: Date.now(),
+        role: "assistant",
+        text: result.reply ?? "已收到您的語音需求，我會立即為您處理。",
+      };
 
-    // const utterance = new SpeechSynthesisUtterance(assistantMessage.text);
-    // utterance.lang = "zh-TW";
-    // window.speechSynthesis.speak(utterance);
+      setMessages((prev) => [...prev, assistantMessage]);
+      await playTextToSpeech(assistantMessage.text, result.language);
+
+      
+      // const utterance = new SpeechSynthesisUtterance(assistantMessage.text);
+      // utterance.lang = "zh-TW";
+      // window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error("speechToText error:", error);
+      
+      let errorText = "抱歉，目前系統暫時無法回應，請稍後再試。";
+
+      if (axios.isAxiosError(error)) {
+        if (error.code === "ECONNABORTED") {
+          errorText = "系統回應時間過長，請稍後再試。";
+        } else {
+          errorText =
+            error.response?.data?.message ??
+            error.response?.data?.detail ??
+            error.message ??
+            errorText;
+        }
+      }
+
+      const errorMessage: ChatMessage = {
+        id: Date.now() + 1,
+        role: "assistant",
+        text: errorText,
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsThinking(false);
+      setIsSending(false);
+    }
   };
 
   const sendMsg = async () => {
@@ -264,6 +315,9 @@ function AssistantPage() {
     setIsSending(true);
 
     try {
+      setIsSending(true);
+      setIsThinking(true);
+
       const result = await sendMsgApi(text);
 
       const assistantMessage: ChatMessage = {
@@ -298,6 +352,7 @@ function AssistantPage() {
 
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
+      setIsThinking(false);
       setIsSending(false);
     }
   };
@@ -325,6 +380,14 @@ function AssistantPage() {
             <div className="chat-bubble">{item.text}</div>
           </div>
         ))}
+        {isThinking && (
+          <div className="message assistant">
+            <div className="message-bubble">
+              🤖 正在思考
+              <span className="thinking-dots"></span>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -341,6 +404,7 @@ function AssistantPage() {
             type="button"
             className={`icon-button ${isRecording ? "recording" : ""}`}
             onClick={recording}
+            disabled={isSending}
             title={isRecording ? "停止錄音" : "開始錄音"}
           >
             <Mic size={20} />
@@ -358,16 +422,31 @@ function AssistantPage() {
         </div>
 
         <div className="quick-actions">
-          <button onClick={() => setMessage("需要多送兩瓶水")}>
+          <button
+            disabled={isSending || isRecording}
+            onClick={() => setMessage("需要多送兩瓶水")}
+          >
             需要多送兩瓶水
           </button>
-          <button onClick={() => setMessage("我想預約 SPA")}>
+
+          <button
+            disabled={isSending || isRecording}
+            onClick={() => setMessage("我想預約 SPA")}
+          >
             預約 SPA
           </button>
-          <button onClick={() => setMessage("請推薦今晚餐廳")}>
+
+          <button
+            disabled={isSending || isRecording}
+            onClick={() => setMessage("請推薦今晚餐廳")}
+          >
             晚餐餐廳推薦
           </button>
-          <button onClick={() => setMessage("請幫我接駁車時間")}>
+
+          <button
+            disabled={isSending || isRecording}
+            onClick={() => setMessage("請幫我接駁車時間")}
+          >
             接駁車時間
           </button>
         </div>
