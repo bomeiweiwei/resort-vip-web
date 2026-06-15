@@ -7,6 +7,9 @@ import MapPage from "./pages/MapPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
+import GuideLoadingPage from "./pages/GuideLoadingPage";
+import GuideResultPage from "./pages/GuideResultPage";
+
 function App() {
   return (
     <Routes>
@@ -18,6 +21,8 @@ function App() {
           <Route path="assistant" element={<AssistantPage />} />
           <Route path="itinerary" element={<ItineraryPage />} />
           <Route path="guide" element={<GuidePage />} />
+          <Route path="guide/loading" element={<GuideLoadingPage />} />
+          <Route path="guide/result" element={<GuideResultPage />} />
           <Route path="map" element={<MapPage />} />
         </Route>
       </Route>
