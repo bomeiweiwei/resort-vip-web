@@ -1,0 +1,348 @@
+/* GuidePage */
+
+.guide-page {
+  min-height: calc(100vh - 56px);
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+.guide-hero {
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.guide-camera-circle {
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 36px;
+}
+
+.guide-hero h1 {
+  margin: 0 0 16px;
+  color: #0f172a;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.guide-hero p {
+  margin: 0 0 36px;
+  color: #64748b;
+  font-size: 20px;
+  line-height: 1.7;
+}
+
+.guide-upload-button {
+  border: none;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 18px 36px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.2);
+}
+
+.guide-upload-button:hover {
+  background: #111827;
+}
+
+.guide-upload-button:active {
+  transform: translateY(1px);
+}
+
+/* GuideLoadingPage */
+
+.guide-loading-page {
+  min-height: calc(100vh - 56px);
+  background: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
+
+.guide-loading-card {
+  width: 280px;
+  height: 280px;
+  border-radius: 28px;
+  background: #1e293b;
+  border: 2px solid rgba(245, 158, 11, 0.75);
+  border-top: 8px solid #f59e0b;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-loading-content p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* GuideResultPage */
+
+.guide-result-page {
+  min-height: calc(100vh - 56px);
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+}
+
+.guide-result-hero {
+  height: 260px;
+  background: linear-gradient(
+    180deg,
+    #8b95a3 0%,
+    #5f6b7c 48%,
+    #1f2937 100%
+  );
+  position: relative;
+  padding: 0 24px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.guide-restart-button {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.45);
+  color: #ffffff;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.guide-result-info {
+  color: #ffffff;
+  margin-bottom: 24px;
+}
+
+.guide-result-info h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.guide-result-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #e5e7eb;
+  font-size: 15px;
+}
+
+.guide-audio-card {
+  margin: -20px 20px 32px;
+  min-height: 84px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.guide-audio-button {
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.guide-audio-track {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.guide-audio-progress {
+  width: 32%;
+  height: 100%;
+  background: #0f172a;
+  border-radius: 999px;
+}
+
+.guide-chat-list {
+  flex: 1;
+  padding: 24px 32px 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.guide-chat-row {
+  display: flex;
+}
+
+.guide-chat-row-assistant {
+  justify-content: flex-start;
+}
+
+.guide-chat-row-user {
+  justify-content: flex-end;
+}
+
+.guide-chat-bubble {
+  max-width: 80%;
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 18px 22px;
+  font-size: 18px;
+  line-height: 1.7;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+}
+
+.guide-chat-row-assistant .guide-chat-bubble {
+  width: 80%;
+  max-width: none;
+}
+
+.guide-chat-row-user .guide-chat-bubble {
+  width: 55%;
+  max-width: none;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.guide-chat-input-area {
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 16px;
+}
+
+.guide-chat-input-wrap {
+  height: 44px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 18px;
+}
+
+.guide-chat-input-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.guide-chat-input-wrap input::placeholder {
+  color: #94a3b8;
+}
+
+.guide-mic-button,
+.guide-send-button {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.guide-send-button {
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+}
+
+/* RWD */
+
+@media (max-width: 768px) {
+  .guide-camera-circle {
+    width: 220px;
+    height: 220px;
+  }
+
+  .guide-hero h1 {
+    font-size: 26px;
+  }
+
+  .guide-hero p {
+    font-size: 17px;
+  }
+
+  .guide-upload-button {
+    font-size: 20px;
+    padding: 16px 28px;
+  }
+
+  .guide-loading-card {
+    width: 220px;
+    height: 220px;
+  }
+
+  .guide-result-hero {
+    height: 220px;
+  }
+
+  .guide-audio-card {
+    margin: -20px 16px 24px;
+    padding: 16px;
+  }
+
+  .guide-chat-list {
+    padding: 20px 16px 100px;
+  }
+
+  .guide-chat-row-assistant .guide-chat-bubble,
+  .guide-chat-row-user .guide-chat-bubble {
+    width: auto;
+    max-width: 88%;
+  }
+
+  .guide-chat-bubble {
+    font-size: 16px;
+  }
+}
