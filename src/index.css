@@ -385,6 +385,26 @@ a {
   gap: 20px;
 }
 
+/* 讓圖標和文字併排並垂直居中 */
+.header-title-container {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* 圖標與右側文字的間距 */
+}
+
+/* 圖標的圓形外圈背景（仿照你第一張圖的橘色質感） */
+.header-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f59e0b; /* 質感的溫暖橘黃色，可依據品牌色調整 */
+  color: #ffffff;            /* 圖標顏色：白色 */
+  border-radius: 50%;        /* 完美正圓形 */
+  flex-shrink: 0;            /* 防止外圈被壓縮變形 */
+}
+
 .mobile-header-subtitle {
   display: none;
 }
@@ -609,23 +629,24 @@ a {
 }
 
 .itinerary-hero {
-  background: linear-gradient(135deg, #101828, #2b2f36);
-  color: white;
-  border-radius: 28px;
-  padding: 34px 40px;
-  margin-bottom: 36px;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); /* 加上細緻的漸層 */
+  padding: 24px 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3); /* 柔和的陰影 */
 }
 
 .itinerary-hero h2 {
-  margin: 0 0 12px;
-  font-size: 30px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 8px;
+  color: #ffffff;
 }
 
 .itinerary-hero p {
-  margin: 0 0 24px;
-  color: #cbd5e1;
-  font-size: 17px;
+  color: #94a3b8; /* 降低副標題亮度，拉開視覺層級 */
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .itinerary-filters {
@@ -635,26 +656,45 @@ a {
 }
 
 .itinerary-filter {
+  background-color: rgba(255, 255, 255, 0.08); /* 改用半透明白，質感提升 */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 48px; /* 固定高度，點擊範圍更舒服 */
   display: flex;
   align-items: center;
   gap: 10px;
+  transition: all 0.2s ease;
+}
 
-  min-width: 210px;
-  height: 42px;
-  padding: 0 14px;
-
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
-  color: #f59e0b;
+.itinerary-filter:focus-within {
+  border-color: #f59e0b; /* 橘黃色焦點框，呼應品牌色 */
+  background-color: rgba(255, 255, 255, 0.12);
 }
 
 .itinerary-filter select {
   flex: 1;
-  border: none;
-  outline: none;
-  color: white;
-  background: transparent;
-  font-size: 16px;
+  background: transparent !important;
+  color: #ffffff !important; /* 強制文字變白色 */
+  border: none !important;
+  outline: none !important;
+  font-size: 0.95rem;
+  font-weight: 500;
+  height: 100%;
+  cursor: pointer;
+  appearance: none; /* 清除原生箭頭 */
+  -webkit-appearance: none;
+  
+  /* 用自訂的高質感微小箭頭圖示替代（可選） */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0 center !important;
+  padding-right: 24px;
+}
+
+.itinerary-filter select option {
+  background-color: #1e293b;
+  color: #ffffff;
 }
 
 .itinerary-filter option {
@@ -721,16 +761,21 @@ a {
 }
 
 .empty-card {
-  background: white;
-  border-radius: 20px;
-  padding: 28px;
+background: #ffffff;
+  border-left: 4px solid #f59e0b; /* 側邊亮色提示線 */
+  padding: 20px;
+  border-radius: 12px;
   color: #64748b;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin: 20px 0;
 }
 
 @media (max-width: 768px) {
   .itinerary-page {
-    max-width: none;
+    padding-bottom: 100px !important;
   }
 
   .itinerary-hero {
@@ -775,12 +820,10 @@ a {
 }
 
 .itinerary-feedback {
-  margin-top: 24px;
-  padding: 28px;
-  background: #fff;
-  border: 1px solid #e5eaf2;
-  border-radius: 22px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .feedback-title {
@@ -802,23 +845,26 @@ a {
 }
 
 .feedback-input-wrap {
+  background-color: #f8fafc; /* 淺灰色基底 */
+  border: 1px solid #e2e8f0;
+  border-radius: 24px; /* 膠囊狀輸入框 */
+  padding: 4px 6px 4px 16px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 54px;
-  padding: 0 10px 0 18px;
-  border: 1px solid #e2e8f0;
-  border-radius: 999px;
-  background: #f8fafc;
+  gap: 8px;
 }
 
 .feedback-input-wrap input {
   flex: 1;
   border: none;
-  outline: none;
   background: transparent;
-  font-size: 16px;
-  color: #0f172a;
+  padding: 8px 0;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.feedback-input-wrap input:focus {
+  outline: none;
 }
 
 .feedback-input-wrap input::placeholder {
@@ -827,18 +873,30 @@ a {
 
 .voice-button,
 .send-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   cursor: pointer;
-  background: transparent;
-  font-size: 18px;
+  transition: transform 0.1s ease;
+}
+
+.voice-button {
+  background-color: #e2e8f0;
+  font-size: 1.1rem;
 }
 
 .send-button {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: #0f172a;
-  color: #fff;
+  background-color: #0f172a; /* 配合深色主題的發送鈕 */
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.voice-button:active, .send-button:active {
+  transform: scale(0.92); /* 點擊時的物理微縮回饋 */
 }
 
 .thinking-dots::after {
@@ -862,4 +920,22 @@ a {
   100% {
     content: "...";
   }
+}
+.lang-switch-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;                  /* 圖示和文字的間距 */
+  background-color: #f0f4f9; /* 淺灰色/藍色背景（可依據你目前的 UI 調整） */
+  color: #334155;            /* 文字與圖示顏色 */
+  border: none;
+  padding: 8px 16px;         /* 上下與左右內襯，拉出膠囊形狀 */
+  border-radius: 100px;      /* 關鍵：極大的圓角，做出膠囊形狀 */
+  font-weight: 600;          /* 讓文字稍微粗一點點 */
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+/* 懸停（Hover）時的微互動，讓使用者知道可以點擊 */
+.lang-switch-button:hover {
+  background-color: #e2e8f0;
 }
