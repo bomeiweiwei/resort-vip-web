@@ -20,8 +20,6 @@ export default defineConfig(({ mode }) => {
       port: 5174,
       strictPort: true,
       proxy,
-      // 在這裡加上這行設定即可
-      allowedHosts: true,
     },
   };
 });
