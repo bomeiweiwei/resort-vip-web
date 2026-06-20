@@ -1,37 +1,42 @@
-import { Bell, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Globe, Bot } from "lucide-react";
 
+// 定義接收的 Props 結構
 type HeaderProps = {
   title: string;
+  currentLang: "zh" | "en";
+  onLanguageChange: (lang: "zh" | "en") => void;
 };
 
-function Header({ title }: HeaderProps) {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("vip_token");
-    localStorage.removeItem("vip_user");
-
-    navigate("/login");
+function Header({ title, currentLang, onLanguageChange }: HeaderProps) {
+  
+  const handleLanguageChange = () => {
+    // 點擊時通知父元件切換語系
+    const nextLang = currentLang === "zh" ? "en" : "zh";
+    onLanguageChange(nextLang);
   };
 
   return (
     <header className="top-header">
-      <div>
-        <h1>{title}</h1>
-        <span className="mobile-header-subtitle">RESORT VIP</span>
+      <div className="header-title-container">
+        <div className="header-icon-wrapper">
+          <Bot size={24} />
+        </div>
+        
+        <div>
+          <h1>{title}</h1>
+          <span className="mobile-header-subtitle">
+            RESORT VIP
+          </span>
+        </div>
       </div>
 
       <div className="header-actions">
-        <button onClick={handleLogout} className="logout-button">
-          <LogOut size={18} />
-          <span>登出</span>
+        <button onClick={handleLanguageChange} className="lang-switch-button">
+          <Globe size={18} />
+          {/* 按鈕顯示即時對應的文字 */}
+          <span>{currentLang === "zh" ? "繁中" : "EN"}</span>
         </button>
 
-        <div className="notification">
-          <Bell size={24} />
-          <span className="notification-dot" />
-        </div>
       </div>
     </header>
   );

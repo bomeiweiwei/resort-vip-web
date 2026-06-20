@@ -385,6 +385,26 @@ a {
   gap: 20px;
 }
 
+/* 讓圖標和文字併排並垂直居中 */
+.header-title-container {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* 圖標與右側文字的間距 */
+}
+
+/* 圖標的圓形外圈背景（仿照你第一張圖的橘色質感） */
+.header-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background-color: #f59e0b; /* 質感的溫暖橘黃色，可依據品牌色調整 */
+  color: #ffffff;            /* 圖標顏色：白色 */
+  border-radius: 50%;        /* 完美正圓形 */
+  flex-shrink: 0;            /* 防止外圈被壓縮變形 */
+}
+
 .mobile-header-subtitle {
   display: none;
 }
@@ -434,4 +454,488 @@ a {
   .nav-item.active {
     box-shadow: none;
   }
+}
+
+.assistant-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.chat-date {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.chat-row {
+  display: flex;
+  margin-bottom: 16px;
+}
+
+.chat-row.assistant {
+  justify-content: flex-start;
+}
+
+.chat-row.user {
+  justify-content: flex-end;
+}
+
+.chat-bubble {
+  max-width: 760px;
+  padding: 20px 24px;
+  border-radius: 20px;
+  font-size: 18px;
+  line-height: 1.8;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.chat-row.assistant .chat-bubble {
+  background: #ffffff;
+  color: #334155;
+}
+
+.chat-row.user .chat-bubble {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.chat-input-area {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 18px;
+  background: #f8fafc;
+}
+
+.chat-input-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eef2f7;
+  border-radius: 999px;
+  padding: 8px 10px 8px 20px;
+}
+
+.chat-input-box input {
+  flex: 1;
+  height: 44px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 18px;
+  color: #334155;
+}
+
+.icon-button,
+.send-button {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.icon-button {
+  background: #ffffff;
+  color: #64748b;
+}
+
+.icon-button.recording {
+  color: #ff4d4f;
+  animation: recording-pulse 1s infinite;
+}
+
+@keyframes recording-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+.send-button {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.icon-button:disabled,
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.quick-actions button {
+  border: 1px solid #dbe3ef;
+  background: #ffffff;
+  color: #64748b;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.quick-actions button:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+@media (max-width: 768px) {
+  .chat-bubble {
+    max-width: 88%;
+    font-size: 16px;
+    padding: 16px 18px;
+  }
+
+  .chat-input-box input {
+    font-size: 16px;
+  }
+
+  .quick-actions {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .quick-actions button {
+    white-space: nowrap;
+  }
+}
+
+.itinerary-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.itinerary-hero {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); /* 加上細緻的漸層 */
+  padding: 24px 20px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.3); /* 柔和的陰影 */
+}
+
+.itinerary-hero h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 8px;
+  color: #ffffff;
+}
+
+.itinerary-hero p {
+  color: #94a3b8; /* 降低副標題亮度，拉開視覺層級 */
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.itinerary-filters {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.itinerary-filter {
+  background-color: rgba(255, 255, 255, 0.08); /* 改用半透明白，質感提升 */
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 48px; /* 固定高度，點擊範圍更舒服 */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.itinerary-filter:focus-within {
+  border-color: #f59e0b; /* 橘黃色焦點框，呼應品牌色 */
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.itinerary-filter select {
+  flex: 1;
+  background: transparent !important;
+  color: #ffffff !important; /* 強制文字變白色 */
+  border: none !important;
+  outline: none !important;
+  font-size: 0.95rem;
+  font-weight: 500;
+  height: 100%;
+  cursor: pointer;
+  appearance: none; /* 清除原生箭頭 */
+  -webkit-appearance: none;
+  
+  /* 用自訂的高質感微小箭頭圖示替代（可選） */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0 center !important;
+  padding-right: 24px;
+}
+
+.itinerary-filter select option {
+  background-color: #1e293b;
+  color: #ffffff;
+}
+
+.itinerary-filter option {
+  color: #111827;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 48px;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dbe3ef;
+}
+
+.timeline-row {
+  position: relative;
+  margin-bottom: 28px;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: -42px;
+  top: 12px;
+  width: 16px;
+  height: 16px;
+  background: #f59e0b;
+  border: 4px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.18);
+}
+
+.timeline-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+.timeline-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #d97706;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.timeline-card h3 {
+  margin: 0 0 12px;
+  color: #111827;
+  font-size: 22px;
+}
+
+.timeline-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.empty-card {
+background: #ffffff;
+  border-left: 4px solid #f59e0b; /* 側邊亮色提示線 */
+  padding: 20px;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .itinerary-page {
+    padding-bottom: 100px !important;
+  }
+
+  .itinerary-hero {
+    padding: 26px 22px;
+    border-radius: 22px;
+    margin-bottom: 28px;
+  }
+
+  .itinerary-hero h2 {
+    font-size: 26px;
+  }
+
+  .itinerary-filters {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .itinerary-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .timeline {
+    padding-left: 34px;
+  }
+
+  .timeline::before {
+    left: 10px;
+  }
+
+  .timeline-dot {
+    left: -31px;
+  }
+
+  .timeline-card {
+    padding: 22px;
+  }
+
+  .timeline-card h3 {
+    font-size: 20px;
+  }
+}
+
+.itinerary-feedback {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.feedback-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  color: #0f172a;
+}
+
+.feedback-title span {
+  color: #f59e0b;
+  font-size: 20px;
+}
+
+.feedback-title h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.feedback-input-wrap {
+  background-color: #f8fafc; /* 淺灰色基底 */
+  border: 1px solid #e2e8f0;
+  border-radius: 24px; /* 膠囊狀輸入框 */
+  padding: 4px 6px 4px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feedback-input-wrap input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.feedback-input-wrap input:focus {
+  outline: none;
+}
+
+.feedback-input-wrap input::placeholder {
+  color: #a0aec0;
+}
+
+.voice-button,
+.send-button {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.voice-button {
+  background-color: #e2e8f0;
+  font-size: 1.1rem;
+}
+
+.send-button {
+  background-color: #0f172a; /* 配合深色主題的發送鈕 */
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.voice-button:active, .send-button:active {
+  transform: scale(0.92); /* 點擊時的物理微縮回饋 */
+}
+
+.thinking-dots::after {
+  content: "";
+  animation: dots 1.5s infinite;
+}
+
+@keyframes dots {
+  0% {
+    content: "";
+  }
+
+  33% {
+    content: ".";
+  }
+
+  66% {
+    content: "..";
+  }
+
+  100% {
+    content: "...";
+  }
+}
+.lang-switch-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;                  /* 圖示和文字的間距 */
+  background-color: #f0f4f9; /* 淺灰色/藍色背景（可依據你目前的 UI 調整） */
+  color: #334155;            /* 文字與圖示顏色 */
+  border: none;
+  padding: 8px 16px;         /* 上下與左右內襯，拉出膠囊形狀 */
+  border-radius: 100px;      /* 關鍵：極大的圓角，做出膠囊形狀 */
+  font-weight: 600;          /* 讓文字稍微粗一點點 */
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+/* 懸停（Hover）時的微互動，讓使用者知道可以點擊 */
+.lang-switch-button:hover {
+  background-color: #e2e8f0;
 }

@@ -1,29 +1,31 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 import loginSuccess from "../mocks/login_success.json";
+import type { LoginRequest, LoginResponse, VipMagicLoginResponse  } from "../types/auth";
 
 const useMock = import.meta.env.VITE_USE_MOCK === "true";
-
-export type LoginRequest = {
-    account: string;
-    password: string;
-};
-
-export type LoginResponse = {
-    token: string;
-    user: {
-        name: string;
-        roomName: string;
-        role: string;
-    };
-};
 
 export const login = async (
     request: LoginRequest
 ): Promise<LoginResponse> => {
     if (useMock) {
-        return loginSuccess;
+        return loginSuccess as LoginResponse;
     }
 
-    const response = await axios.post<LoginResponse>("/api/auth/login", request);
+    const response = await apiClient.post<LoginResponse>(
+        "/api/auth/login",
+        request
+    );
+
     return response.data;
+};
+
+export const vipMagicLogin = async (
+  token: string
+): Promise<VipMagicLoginResponse> => {
+  const response = await apiClient.post<VipMagicLoginResponse>(
+    "/api/auth/vip-login",
+    { token }
+  );
+
+  return response.data;
 };

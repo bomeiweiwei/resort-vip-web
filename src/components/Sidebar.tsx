@@ -1,49 +1,60 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Camera, Map, MessageSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
-import type { VipProfile } from "../types/auth";
+import type { CustomerProfile } from "../types/auth";
 
+// 1. 將選單標籤改為中英雙語結構
 const menuItems = [
   {
-    label: "智能幫手",
+    label: { zh: "智能幫手", en: "Assistant" },
     path: "/assistant",
     icon: MessageSquare,
   },
   {
-    label: "行程推薦",
+    label: { zh: "行程推薦", en: "Itinerary" },
     path: "/itinerary",
     icon: CalendarDays,
   },
   {
-    label: "專屬導遊",
+    label: { zh: "專屬導遊", en: "AI Guide" },
     path: "/guide",
     icon: Camera,
   },
   {
-    label: "景點地圖",
+    label: { zh: "景點地圖", en: "Map" },
     path: "/map",
     icon: Map,
   },
 ];
 
-function Sidebar() {
-  const [profile, setProfile] = useState<VipProfile>({
+// 2. 定義 Props，讓父元件把目前的語系傳進來
+type SidebarProps = {
+  currentLang: "zh" | "en";
+};
+
+function Sidebar({ currentLang }: SidebarProps) {
+  const [profile, setProfile] = useState({
     name: "",
     roomName: "",
   });
 
   useEffect(() => {
-    const userText = localStorage.getItem("vip_user");
+    const profileText = localStorage.getItem("customer_profile");
 
-    if (!userText) {
+    if (!profileText) {
       return;
     }
 
-    const user = JSON.parse(userText);
+    const customerProfile = JSON.parse(profileText) as CustomerProfile;
 
     setProfile({
-      name: user.name,
-      roomName: user.roomName,
+      name: customerProfile.full_name,
+      roomName: [
+        customerProfile.room_type_name,
+        customerProfile.room_no,
+      ]
+        .filter(Boolean)
+        .join(" "),
     });
   }, []);
 
@@ -54,10 +65,15 @@ function Sidebar() {
         <div className="brand-title">RESORT VIP</div>
       </div>
 
+      {/* 3. 訪客資訊區塊也支援雙語翻譯 */}
       <div className="guest-info">
-        <p>歡迎回來</p>
-        <strong>{profile.name}</strong>
-        <span>{profile.roomName}</span>
+        <p>{currentLang === "zh" ? "歡迎回來" : "Welcome back"}</p>
+        <strong>
+          {profile.name || (currentLang === "zh" ? "VIP 貴賓" : "VIP Guest")}
+        </strong>
+        <span>
+          {profile.roomName || (currentLang === "zh" ? "尊榮旅客服務" : "Exclusive Service")}
+        </span>
       </div>
 
       <nav className="side-nav">
@@ -73,7 +89,8 @@ function Sidebar() {
               }
             >
               <Icon size={24} />
-              <span>{item.label}</span>
+              {/* 4. 根據當前語系動態顯示對應的文字 */}
+              <span>{item.label[currentLang]}</span>
             </NavLink>
           );
         })}

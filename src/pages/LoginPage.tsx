@@ -5,7 +5,7 @@ import { login } from "../apis/authApi";
 function LoginPage() {
   const navigate = useNavigate();
 
-  const [account, setAccount] = useState("");
+  const [loginAccount, setLoginAccount] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -17,15 +17,32 @@ function LoginPage() {
 
     try {
       const result = await login({
-        account,
+        login_account: loginAccount,
         password,
       });
 
-      localStorage.setItem("vip_token", result.token);
-      localStorage.setItem("vip_user", JSON.stringify(result.user));
+      localStorage.setItem(
+        "customer_access_token",
+        result.access_token
+      );
+
+      localStorage.setItem(
+        "customer_profile",
+        JSON.stringify({
+          customer_vip_account_id: result.customer_vip_account_id,
+          customer_id: result.customer_id,
+          login_account: result.login_account,
+          full_name: result.full_name,
+          email: result.email,
+          mobile_phone: result.mobile_phone,
+          room_type_name: result.room_type_name,
+          room_no: result.room_no,
+        })
+      );
 
       navigate("/assistant");
-    } catch {
+    } catch (error) {
+      console.error(error);
       setErrorMessage("登入失敗，請確認帳號密碼");
     }
   };
@@ -39,12 +56,14 @@ function LoginPage() {
         <p>尊榮旅客服務入口</p>
 
         <label>
-          帳號
+          VIP帳號
           <input
             type="text"
-            value={account}
-            onChange={(event) => setAccount(event.target.value)}
-            placeholder="請輸入帳號"
+            value={loginAccount}
+            onChange={(event) =>
+              setLoginAccount(event.target.value)
+            }
+            placeholder="請輸入 VIP 帳號"
           />
         </label>
 
@@ -53,16 +72,26 @@ function LoginPage() {
           <input
             type="password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
             placeholder="請輸入密碼"
           />
         </label>
 
-        {errorMessage && <div className="login-error">{errorMessage}</div>}
+        {errorMessage && (
+          <div className="login-error">
+            {errorMessage}
+          </div>
+        )}
 
-        <button type="submit">登入 VIP 系統</button>
+        <button type="submit">
+          登入 VIP 系統
+        </button>
 
-        <span className="login-hint">Mock 模式下可任意輸入帳號密碼</span>
+        <span className="login-hint">
+          請使用入住時提供的 VIP 帳號與密碼
+        </span>
       </form>
     </div>
   );
