@@ -19,7 +19,7 @@
    1. 導遊首頁 (GuidePage)
    ========================================================================== */
 .guide-page {
-  padding: 24px 16px (120px + env(safe-area-inset-bottom, 24px)) 16px !important;
+  padding: 24px 16px calc(120px + env(safe-area-inset-bottom, 24px)) 16px !important;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -40,7 +40,7 @@
   margin-bottom: auto;
 }
 
-/* 膠囊/相機大圓圈：加上了精緻的漸層外圈、陰影與脈衝 Hover */
+/* 膠囊/相機大圓圈：漸層外圈、陰影與脈衝 Hover */
 .guide-camera-circle {
   width: 180px;
   height: 180px;
@@ -100,7 +100,7 @@
   max-width: 360px;
 }
 
-/* 上傳/拍攝按鈕：增加按壓縮小回饋與亮點 */
+/* 上傳/拍攝按鈕 */
 .guide-upload-button {
   border: none;
   border-radius: 999px;
@@ -154,7 +154,7 @@
   gap: 28px;
 }
 
-/* 載入大卡：加入高亮橘框與極具質感的掃描呼吸燈 */
+/* 載入大卡：高亮橘框與科技掃描呼吸燈 */
 .guide-loading-card {
   width: 180px;
   height: 180px;
@@ -306,17 +306,16 @@
 }
 
 .guide-audio-progress {
-  width: 32%;
   height: 100%;
   background: var(--dark-slate);
   border-radius: 999px;
-  transition: width 0.1s linear;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 語音問答對話清單 (Chat List) */
 .guide-chat-list {
   flex: 1;
-  padding: 12px 16px (100px + env(safe-area-inset-bottom, 16px));
+  padding: 12px 16px calc(100px + env(safe-area-inset-bottom, 16px));
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -336,7 +335,7 @@
   justify-content: flex-end;
 }
 
-/* 氣泡對齊 196460.jpg：白底灰字，使用者深色底 */
+/* 氣泡樣式：白底灰字，使用者深色底 */
 .guide-chat-bubble {
   max-width: 85%;
   background: #ffffff;
@@ -351,7 +350,7 @@
 }
 
 .guide-chat-row-assistant .guide-chat-bubble {
-  border-bottom-left-radius: 4px; /* 經典對話泡泡尾部 */
+  border-bottom-left-radius: 4px;
 }
 
 .guide-chat-row-user .guide-chat-bubble {
@@ -372,7 +371,7 @@
   z-index: 10;
 }
 
-/* 完美膠囊式輸入框外圍 */
+/* 膠囊式輸入框外圍 */
 .guide-chat-input-wrap {
   background-color: #f8fafc;
   border: 1px solid var(--border-color);
@@ -423,7 +422,12 @@
   background-color: #f1f5f9;
 }
 
-/* 發送按鈕 (深藍/橘黃搭配) */
+.guide-mic-button.recording {
+  background-color: rgba(234, 88, 12, 0.1);
+  animation: pulseRecording 1.2s infinite alternate;
+}
+
+/* 發送按鈕 */
 .guide-send-button {
   background-color: var(--dark-slate);
   color: #ffffff;
@@ -455,7 +459,7 @@
 }
 
 /* ==========================================================================
-   動畫細節 (Keyframes)
+   動畫與響應式微調
    ========================================================================== */
 @keyframes loadingPulse {
   0%, 100% {
@@ -469,20 +473,16 @@
 }
 
 @keyframes scanBeam {
-  0% {
-    top: 0%;
-  }
-  50% {
-    top: 98%;
-  }
-  100% {
-    top: 0%;
-  }
+  0% { top: 0%; }
+  50% { top: 98%; }
+  100% { top: 0%; }
 }
 
-/* ==========================================================================
-   響應式設計微調 (RWD)
-   ========================================================================== */
+@keyframes pulseRecording {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.3); }
+  100% { transform: scale(1.1); box-shadow: 0 0 8px 2px rgba(234, 88, 12, 0); }
+}
+
 @media (max-width: 768px) {
   .guide-page {
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 16px)) !important;
@@ -493,45 +493,25 @@
     height: 140px;
   }
 
-  .guide-hero h1 {
-    font-size: 22px;
-  }
-
-  .guide-hero p {
-    font-size: 13px;
-    padding: 0 12px;
-  }
-
-  .guide-upload-button {
-    font-size: 14px;
-    padding: 12px 24px;
-  }
-
-  .guide-loading-card {
-    width: 140px;
-    height: 140px;
-  }
-
-  .guide-result-hero {
-    height: 160px;
-  }
-
+  .guide-hero h1 { font-size: 22px; }
+  .guide-hero p { font-size: 13px; padding: 0 12px; }
+  .guide-upload-button { font-size: 14px; padding: 12px 24px; }
+  .guide-loading-card { width: 140px; height: 140px; }
+  .guide-result-hero { height: 160px; }
+  
   .guide-audio-card {
     margin: -16px 12px 16px;
     padding: 10px 16px;
   }
 
   .guide-chat-list {
-    padding: 12px 12px (80px + env(safe-area-inset-bottom, 12px));
+    padding: 12px 12px calc(80px + env(safe-area-inset-bottom, 12px));
   }
 
   .guide-chat-row-assistant .guide-chat-bubble,
   .guide-chat-row-user .guide-chat-bubble {
-    width: auto;
     max-width: 88%;
   }
 
-  .guide-chat-bubble {
-    font-size: 13px;
-  }
+  .guide-chat-bubble { font-size: 13px; }
 }

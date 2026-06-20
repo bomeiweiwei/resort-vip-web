@@ -2,15 +2,6 @@ import { useState, useRef } from "react";
 import { Camera, Image as ImageIcon, Mic, Send } from "lucide-react";
 import { useNavigate, useOutletContext, useInRouterContext, HashRouter } from "react-router-dom";
 
-// ==========================================
-// 🛠️ 模擬 API 實作（防止編譯時出現 Could not resolve "../apis/guideApi" 錯誤）
-// 當您本地有真實的 API 檔案時，可以直接替換為真實的 import 
-// ==========================================
-const analyzeGuideImageMock = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-  return { success: true };
-};
-
 // 中英雙語翻譯字典
 const translations = {
   title: {
@@ -31,15 +22,12 @@ const translations = {
   }
 };
 
-// 🎯 內部核心導覽頁面組件
 function GuidePageInternal() {
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
-  
-  // 🎯 建立 Ref 來控制隱藏的 file input
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // 🎯 安全防護：取得全域語系狀態 (zh / en)，若無或為 null 則安全預設為 "zh"，防止獨立渲染時崩潰
+  // 取得全域語系狀態 (zh / en)，若無則安全預設為 "zh"
   const context = useOutletContext<any>();
   const currentLang = (context && typeof context === "object" && context.currentLang === "en") ? "en" : "zh";
 
@@ -49,22 +37,15 @@ function GuidePageInternal() {
   };
 
   // 當使用者拍照完成或選擇照片後觸發
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // 前往載入頁面
-    navigate("/guide/loading");
-    try {
-      await analyzeGuideImageMock();
-    } catch (err) {
-      console.error("Image analysis error:", err);
-    }
-    // 前往導覽結果頁面
-    navigate("/guide/result");
+    // 🎯 拍照後將實體 File 物件當作 Router state 傳遞給 LoadingPage 進行 API 上傳
+    navigate("/guide/loading", { state: { imageFile: file } });
   };
 
-  // 當旅客直接在下方輸入文字並送出時，帶著問題導向結果頁
+  // 當旅客直接在下方輸入文字並送出時，帶著初始問題導向結果頁
   const handleSendQuery = () => {
     const text = message.trim();
     if (!text) return;
@@ -75,7 +56,19 @@ function GuidePageInternal() {
   };
 
   return (
-    <main className="guide-page">
+    // 🎯 核心修正：覆蓋 CSS 樣式，鎖定視窗高度、禁止滾動，完美固定畫面
+    <main 
+      className="guide-page" 
+      style={{
+        height: "calc(100dvh - 120px)", // 扣除頂部 Header 與底部 Tab Bar 的約略高度
+        minHeight: "auto",
+        padding: "16px 16px 24px 16px", // 移除過多的底部 padding
+        overflow: "hidden", // 🚫 禁止上下滑動
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
+      {/* 隱藏的實體檔案上傳輸入框：capture="environment" 會在行動裝置上強制開啟後置相機 */}
       <input
         type="file"
         ref={fileInputRef}
@@ -86,7 +79,19 @@ function GuidePageInternal() {
       />
 
       {/* 頂部相機與上傳區 */}
-      <section className="guide-hero">
+      {/* 🎯 設定 flex: 1 讓它自動佔滿上方空間，並將內容完美垂直置中 */}
+      <section 
+        className="guide-hero" 
+        style={{ 
+          flex: 1, 
+          display: "flex", 
+          flexDirection: "column", 
+          justifyContent: "center", 
+          alignItems: "center",
+          marginTop: 0,
+          marginBottom: 0
+        }}
+      >
         <div 
           className="guide-camera-circle" 
           onClick={handleUploadClick} 
@@ -96,7 +101,6 @@ function GuidePageInternal() {
         </div>
 
         <h1>{translations.title[currentLang]}</h1>
-
         <p>{translations.desc[currentLang]}</p>
 
         <button
@@ -110,7 +114,11 @@ function GuidePageInternal() {
       </section>
 
       {/* 底部輸入框 */}
-      <section className="guide-home-input-container">
+      {/* 🎯 取消 margin-top: auto，因為上方已經有 flex: 1 把它往下推了 */}
+      <section 
+        className="guide-home-input-container"
+        style={{ marginTop: 0, paddingBottom: 0 }}
+      >
         <div className="guide-chat-input-wrap">
           <input
             type="text"
@@ -142,7 +150,6 @@ function GuidePageInternal() {
   );
 }
 
-// 🎯 導出安全包裝組件，自動偵測並補充路由環境，防止 standalone 預覽時因缺少 Router Context 崩潰
 function GuidePage() {
   let inRouter = false;
   try {
