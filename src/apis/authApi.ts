@@ -1,4 +1,4 @@
-import axios from "axios";
+import apiClient from "./apiClient";
 import loginSuccess from "../mocks/login_success.json";
 import type { LoginRequest, LoginResponse, VipMagicLoginResponse  } from "../types/auth";
 
@@ -11,7 +11,7 @@ export const login = async (
         return loginSuccess as LoginResponse;
     }
 
-    const response = await axios.post<LoginResponse>(
+    const response = await apiClient.post<LoginResponse>(
         "/api/auth/login",
         request
     );
@@ -22,7 +22,7 @@ export const login = async (
 export const vipMagicLogin = async (
   token: string
 ): Promise<VipMagicLoginResponse> => {
-  const response = await axios.post<VipMagicLoginResponse>(
+  const response = await apiClient.post<VipMagicLoginResponse>(
     "/api/auth/vip-login",
     { token }
   );
