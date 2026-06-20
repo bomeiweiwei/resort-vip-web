@@ -19,7 +19,7 @@ Create `.env.development` for local work:
 
 ```env
 VITE_USE_MOCK=true                    # Use src/mocks/ instead of live backend
-VITE_PROXY_API=http://localhost:8000  # Proxy /api/* to FastAPI when mock is off
+VITE_PROXY_API=http://localhost:8001  # Proxy /api/* to FastAPI when mock is off
 ```
 
 When `VITE_USE_MOCK=true`, every API function returns its local JSON fixture and never hits the network.
@@ -70,10 +70,8 @@ All HTTP calls must live in `src/apis/`. Components never call Axios directly.
 
 `apiClient` ([src/apis/apiClient.ts](src/apis/apiClient.ts)) is a shared Axios instance that:
 - Sets `baseURL` to `VITE_PROXY_API`
-- Injects `Authorization: Bearer <token>` on every request
+- Injects `Authorization: Bearer <token>` when a token is present in `localStorage`
 - On a `401` response, clears session and hard-redirects to `/login`
-
-`authApi.ts` uses bare `axios` (not `apiClient`) because login/vip-login calls happen before a token exists.
 
 Mock-guard pattern used in every API file:
 
@@ -111,6 +109,23 @@ Shared TypeScript types live in `src/types/`:
 | `chat_message.ts` | `ChatMessage` |
 
 Keep types in `src/types/` when shared across files. Types used only inside one component stay in that component file.
+
+## Docker
+
+The `Dockerfile` is a two-stage build: `node:24-alpine` compiles the Vite bundle, then `nginx:1.29-alpine` serves the static output on port 80.
+
+```bash
+# Build frontend image
+docker build --no-cache --build-arg VITE_PROXY_API=http://localhost:8001 -t resort-vip-web .
+
+# Build backend image (run from the FastAPI repo)
+docker build --no-cache -t resort-vip-api .
+
+# Run frontend
+docker run -d --name resort-vip-web -p 5174:80 resort-vip-web
+```
+
+`VITE_USE_MOCK` is forced to `false` inside the image — the Docker build always targets a live backend.
 
 ## Coding Conventions
 

@@ -43,7 +43,7 @@ src/
 │   ├── apiClient.ts          # Axios instance
 │   ├── authApi.ts            # /api/auth/login, /api/auth/vip-login
 │   ├── assistantApi.ts       # /api/assistant/{send-msg,speech-to-text,text-to-speech}
-│   └── itineraryApi.ts       # /api/recommends/exclusive-itinerary
+│   └── itineraryApi.ts       # /api/itinerary/{exclusive-itinerary,feedback}
 │
 ├── components/
 │   ├── Header.tsx
@@ -91,7 +91,7 @@ Create `.env.development` in the project root:
 
 ```env
 VITE_USE_MOCK=true                      # Use src/mocks/ instead of live backend
-VITE_PROXY_API=http://localhost:8000    # Proxy /api/* to FastAPI when mock is off
+VITE_PROXY_API=http://localhost:8001    # Proxy /api/* to FastAPI when mock is off
 ```
 
 When `VITE_USE_MOCK=true`, every API module returns its local JSON fixture and never hits the network. Toggle it off to point at a running FastAPI instance.
@@ -105,6 +105,23 @@ npm run dev       # Start Vite dev server
 npm run build     # tsc -b && vite build
 npm run lint      # ESLint
 npm run preview   # Serve the production build locally
+```
+
+---
+
+## Docker
+
+Two-stage build — `node:24-alpine` compiles the Vite bundle, `nginx:1.29-alpine` serves it on port 80. `VITE_USE_MOCK` is forced to `false` inside the image.
+
+```bash
+# Build frontend image
+docker build --no-cache --build-arg VITE_PROXY_API=http://localhost:8001 -t resort-vip-web .
+
+# Build backend image (run from the FastAPI repo)
+docker build --no-cache -t resort-vip-api .
+
+# Run frontend
+docker run -d --name resort-vip-web -p 5174:80 resort-vip-web
 ```
 
 ---
