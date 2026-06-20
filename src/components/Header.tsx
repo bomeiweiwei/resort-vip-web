@@ -1,4 +1,4 @@
-import { Bell, Globe, Bot } from "lucide-react";
+import { Globe, Bot } from "lucide-react";
 
 // 定義接收的 Props 結構
 type HeaderProps = {

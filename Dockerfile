@@ -1,0 +1,21 @@
+FROM node:24-alpine AS build
+
+WORKDIR /app
+
+ARG VITE_PROXY_API
+ENV VITE_PROXY_API=$VITE_PROXY_API
+ENV VITE_USE_MOCK=false
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+FROM nginx:1.29-alpine
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
