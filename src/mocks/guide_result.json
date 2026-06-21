@@ -1,5 +1,7 @@
 {
   "title": "迎賓水舞廣場",
-  "location": "園區中央",
-  "guideMessage": "聽完導覽後，您對這個景點還有什麼想深入了解的嗎？例如：「水舞秀晚上的時間」、「設計師是誰？」"
+  "location": "園區中央廣場",
+  "guideMessage": "聽完導覽後，您對這個景點還有什麼想深入了解的嗎？例如您可以問我：「水舞秀晚上的演出時間」、「如何前往水舞廣場」或「附近有什麼推薦的下午茶」。",
+  "imageUrl": "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80",
+  "audioUrl": ""
 }

@@ -15,6 +15,23 @@
   --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
 }
 
+/* 🎯 當主版面容器 .page-content 內渲染導遊頁面時，強制沒收外層 Padding 與滾動，由子組件自行填滿並自適應 */
+.page-content:has(.guide-page),
+.page-content:has(.guide-loading-page){
+  overflow: hidden !important;
+  padding: 0 !important;
+  height: calc(100vh - 86px - 48px) !important;
+}
+
+@media (max-width: 768px) {
+  .page-content:has(.guide-page),
+  .page-content:has(.guide-loading-page) {
+    height: calc(100dvh - 64px - 76px) !important; /* 扣除 Header (64px) 與 Tabbar (76px) */
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+}
+
 /* ==========================================================================
    1. 導遊首頁 (GuidePage)
    ========================================================================== */
@@ -483,7 +500,50 @@
   100% { transform: scale(1.1); box-shadow: 0 0 8px 2px rgba(234, 88, 12, 0); }
 }
 
+/* ==========================================================================
+   📱 響應式手機版佈局與 Header 終極鎖定防禦
+   ========================================================================== */
 @media (max-width: 768px) {
+  /* 鎖定全域視窗，防止橡皮筋回彈與底層拉動造成的 Header 偏移 */
+  html, body, #root, .app-shell {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  /* 🎯 將頂部導覽列固定在手機螢幕最上方，永不因滾動而消失 */
+  .top-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 64px !important;
+    width: 100% !important;
+    background-color: #ffffff !important;
+    z-index: 1001 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06) !important;
+    display: flex !important;
+  }
+
+  /* 配合固定 Header 往下位移，防止內容被遮擋 */
+  .main-panel {
+    padding-top: 64px !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  /* 精確限制 page-content 的高度，確保只有其內部獨立滾動 */
+  .page-content {
+    height: calc(100dvh - 64px - 76px) !important; /* 扣除 Header (64px) 與 Tabbar (76px) */
+    overflow-y: auto !important;
+    padding-top: 12px !important;
+    padding-bottom: 24px !important;
+  }
+
+  /* 原有手機版導遊首頁尺寸微調 */
   .guide-page {
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 16px)) !important;
   }

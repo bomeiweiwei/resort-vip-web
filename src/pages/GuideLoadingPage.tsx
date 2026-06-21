@@ -19,6 +19,22 @@ export default function GuideLoadingPage() {
   const context = useOutletContext<any>();
   const currentLang = (context && typeof context === "object" && context.currentLang === "en") ? "en" : "zh";
 
+  // 🎯 核心防禦：載入期間徹底鎖定全域 Body 滾動，卸載時自動還原
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalHeight = document.body.style.height;
+
+    // 鎖定滾動與高度，防止手機端橡皮筋回彈與 PC 端滾輪滑動
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100dvh";
+
+    return () => {
+      // 還原設定
+      document.body.style.overflow = originalOverflow;
+      document.body.style.height = originalHeight;
+    };
+  }, []);
+
   useEffect(() => {
     // 💡 防止 React 18 StrictMode 的 Development 階段重複執行兩次 API 請求
     if (hasTriggered.current) return;
@@ -46,7 +62,7 @@ export default function GuideLoadingPage() {
           language: currentLang
         });
 
-        // 成功拿到後端分析結果後，帶著資料前往結果頁 (GuideResultPage)
+        // 成功拿到後端 analysis 結果後，帶著資料前往結果頁 (GuideResultPage)
         navigate("/guide/result", { state: { analysisResult: result } });
       } catch (error: any) {
         console.error("Analysis failed:", error);
@@ -68,12 +84,28 @@ export default function GuideLoadingPage() {
   }, [location, navigate, currentLang]);
 
   return (
-    <main className="guide-loading-page">
-      <section className="guide-loading-content">
-        <div className="guide-loading-card">
-          <ImageIcon className="animate-pulse" size={44} />
+    <main 
+      className="guide-loading-page"
+      style={{
+        height: "calc(100dvh - 120px)", // 🎯 縮短高度，完美切齊底部導覽 Tab 避免產生外層滾動條
+        width: "100%",
+        minHeight: "auto",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",       // 🎯 使內容在縮短後的高雅版面中完美垂直置中
+        alignItems: "center",           // 🎯 水平置中
+        overflow: "hidden",             // 🎯 確保自身不產生任何滾動條
+        position: "relative",
+        backgroundColor: "#f8fafc"
+      }}
+    >
+      <section className="guide-loading-content" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
+        <div className="guide-loading-card" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <ImageIcon className="animate-pulse" size={44} style={{ color: "var(--primary-color, #f59e0b)" }} />
         </div>
-        <p>{translations.analyzing[currentLang]}</p>
+        <p style={{ fontSize: "15px", color: "#64748b", fontWeight: "500", margin: 0 }}>
+          {translations.analyzing[currentLang]}
+        </p>
       </section>
     </main>
   );

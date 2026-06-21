@@ -1,84 +1,98 @@
-import { useState, useRef } from "react";
-import { Camera, Image as ImageIcon, Mic, Send, Square } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Camera, Image as ImageIcon, Mic, Search, Send, Square } from "lucide-react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+// 🎯 修正引用：依據您的目錄結構，正確指向 styles 資料夾下的 guide.css
+import "../styles/guide.css";
 
 const translations = {
-  title: { zh: "AI 專屬語音導遊", en: "AI Private Voice Guide" },
-  desc: {
-    zh: "拍下園區內任何景點、藝術品或植物，系統將自動為您進行語音導覽，並可深入互動問答。",
-    en: "Take a photo of any attraction, artwork, or plant in the resort. The system will automatically provide an audio guide and interactive Q&A.",
+  title: { zh: "AI 專屬語音導遊", en: "AI Personal Audio Guide" },
+  subTitle: { 
+    zh: "拍下園區內任何景點、藝術品或植物，系統將自動為您進行語音導覽，並可深入互動問答。", 
+    en: "Take a photo of any resort attraction, artwork, or plant. The system will automatically provide audio tours and interactive Q&As." 
   },
   uploadBtn: { zh: "拍照 / 上傳圖片", en: "Take Photo / Upload Image" },
-  placeholder: {
-    zh: "輸入景點/設施：讓我們為您解說",
-    en: "Enter the attraction/facility: Let us explain it to you.",
-  },
+  placeholder: { zh: "輸入景點/設施：讓我們為您解說", en: "Type attraction/facility for guide..." },
+  voiceRecording: { zh: "🎤 [正在錄音，點擊紅色按鈕結束並送出]", en: "🎤 [Recording, click red button to stop & send]" },
   voiceError: { zh: "無法存取麥克風設備，請確認權限。", en: "Unable to access microphone. Please check permissions." }
 };
 
 export default function GuidePage() {
   const navigate = useNavigate();
-  const [message, setMessage] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  // 🎯 語音錄音狀態管理
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 🎯 從 MainLayout 取得全域語系狀態
   const context = useOutletContext<any>();
   const currentLang = (context && typeof context === "object" && context.currentLang === "en") ? "en" : "zh";
 
-  // 📸 觸發原生相機或檔案選取
-  const handleUploadClick = () => {
+  const [searchText, setSearchText] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // 🎯 核心防禦：鎖定 Body 滾動與高度，徹底關閉外部滾動條與橡皮筋回彈
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalHeight = document.body.style.height;
+
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100dvh";
+
+    return () => {
+      // 卸載時回復原設定
+      document.body.style.overflow = originalOverflow;
+      document.body.style.height = originalHeight;
+    };
+  }, []);
+
+  // 🎯 處理照片上傳與相機拍完照
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const selectedFile = files[0];
+      // 帶著圖片檔案，轉場前往 Loading 中介頁面
+      navigate("/guide/loading", { state: { imageFile: selectedFile } });
+    }
+  };
+
+  const triggerUpload = () => {
     fileInputRef.current?.click();
   };
 
-  // 📸 當使用者拍完照或選完圖片
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    // 帶著圖片檔案前往 Loading 頁面
-    navigate("/guide/loading", { state: { imageFile: file } });
+  // 🎯 處理文字查詢送出
+  const handleTextSearch = () => {
+    const query = searchText.trim();
+    if (!query) return;
+    setSearchText("");
+    // 帶著文字查詢，轉場前往 Loading 中介頁面
+    navigate("/guide/loading", { state: { textQuery: query } });
   };
 
-  // ✍️ 文字搜尋送出
-  const handleSendQuery = () => {
-    const text = message.trim();
-    if (!text) return;
-
-    // 帶著純文字查詢前往 Loading 頁面，交由後端做多模態景點辨識
-    navigate("/guide/loading", { state: { textQuery: text } });
-    setMessage("");
-  };
-
-  // 🎤 點擊切換錄音狀態：按一下開始錄音，再按一下停止並送出
+  // 🎯 語音單擊 Toggle 錄音控制
   const toggleRecording = async (e: React.MouseEvent) => {
     e.preventDefault();
 
     if (isRecording) {
-      // 🎯 停止錄音並送出
+      // 停止錄音，觸發 mediaRecorder.onstop 並送出
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
         mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       }
       setIsRecording(false);
     } else {
-      // 🎯 開始錄製語音
+      // 開始錄音
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mediaRecorder = new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
-
+        
         mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0) audioChunksRef.current.push(event.data);
         };
-
+        
         mediaRecorder.onstop = () => {
           const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
-          // 錄音結束，直接帶著語音二進位 Blob 前往 Loading 頁面，由後端做 STT 轉譯與分析
+          // 帶著語音 Blob，轉場前往 Loading 中介頁面
           navigate("/guide/loading", { state: { voiceBlob: audioBlob } });
         };
 
@@ -91,97 +105,69 @@ export default function GuidePage() {
   };
 
   return (
-    <main 
-      className="guide-page" 
-      style={{
-        height: "calc(100dvh - 120px)",
-        minHeight: "auto",
-        padding: "16px 16px 24px 16px",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column"
-      }}
-    >
-      {/* 隱藏的原生 File Input，支援手機呼叫相機 */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        accept="image/*"
-        capture="environment"
-        style={{ display: "none" }}
-        onChange={handleFileChange}
+    <main className="guide-page">
+      {/* 隱藏的實體上傳 Input (支援相機拍照 capture) */}
+      <input 
+        type="file" 
+        accept="image/*" 
+        capture="environment" 
+        ref={fileInputRef} 
+        style={{ display: "none" }} 
+        onChange={handleFileChange} 
       />
 
-      {/* 上半部：相機大按鈕與介紹區 */}
-      <section 
-        className="guide-hero" 
-        style={{ 
-          flex: 1, 
-          display: "flex", 
-          flexDirection: "column", 
-          justifyContent: "center", 
-          alignItems: "center",
-          marginTop: 0,
-          marginBottom: 0
-        }}
-      >
-        <div 
-          className={`guide-camera-circle ${isRecording ? "recording-pulse" : ""}`} 
-          onClick={handleUploadClick} 
-          style={{ cursor: "pointer" }}
-        >
-          <Camera size={56} />
+      {/* 1. 上半部：高雅的虛線圓圈與相機圖標 */}
+      <section className="guide-hero">
+        <div className="guide-camera-circle" onClick={triggerUpload}>
+          <Camera size={40} />
         </div>
 
-        <h1>{translations.title[currentLang]}</h1>
-        <p>{translations.desc[currentLang]}</p>
+        {/* 標題與說明文案 */}
+        <div>
+          <h2>{translations.title[currentLang]}</h2>
+          <p>{translations.subTitle[currentLang]}</p>
+        </div>
 
+        {/* 拍照 / 上傳圖片大按鈕 */}
         <button
           type="button"
           className="guide-upload-button"
-          onClick={handleUploadClick}
+          onClick={triggerUpload}
         >
-          <ImageIcon size={26} />
-          {translations.uploadBtn[currentLang]}
+          <ImageIcon size={18} />
+          <span>{translations.uploadBtn[currentLang]}</span>
         </button>
       </section>
 
-      {/* 下半部：打字輸入與麥克風按鈕區 */}
-      <section 
-        className="guide-home-input-container"
-        style={{ marginTop: 0, paddingBottom: 0 }}
-      >
+      {/* 2. 下半部：置底的輸入框組合（不論怎麼滑，都優雅固定） */}
+      <section className="guide-home-input-container">
         <div className="guide-chat-input-wrap">
-          <input
-            type="text"
-            placeholder={translations.placeholder[currentLang]}
-            value={message}
+          <input 
+            type="text" 
+            placeholder={isRecording ? translations.voiceRecording[currentLang] : translations.placeholder[currentLang]}
+            value={searchText} 
             disabled={isRecording}
-            onChange={(event) => setMessage(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                handleSendQuery();
-              }
-            }}
+            onChange={(e) => setSearchText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleTextSearch()}
           />
-
-          {/* 麥克風按鈕：改為單擊 onClick 進行狀態切換，完美支援手機與桌機 */}
+          
+          {/* 麥克風錄音按鈕 */}
           <button 
             type="button" 
             className={`guide-mic-button ${isRecording ? "recording" : ""}`}
-            title="Voice Input"
             onClick={toggleRecording}
           >
-            {isRecording ? <Square size={16} style={{ color: "#ef4444" }} /> : <Mic size={18} />}
+            {isRecording ? <Square size={16} /> : <Mic size={18} />}
           </button>
 
+          {/* 送出按鈕 */}
           <button 
             type="button" 
-            className="guide-send-button" 
-            onClick={handleSendQuery}
-            disabled={!message.trim() || isRecording}
+            className="guide-send-button"
+            onClick={handleTextSearch}
+            disabled={!searchText.trim() || isRecording}
           >
-            <Send size={18} />
+            <Send size={14} />
           </button>
         </div>
       </section>
