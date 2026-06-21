@@ -81,7 +81,7 @@ function ItineraryPage() {
     try {
       setIsSubmitting(true);
 
-      const result = await submitFeedback(text);
+      const result = await submitFeedback(text, selectedDate);
 
       if (result.success) {
         console.log(result.message);
