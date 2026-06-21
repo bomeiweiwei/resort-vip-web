@@ -40,19 +40,19 @@ function ItineraryPage() {
 
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [aiResponse, setAiResponse] = useState(""); // 顯示 AI 回覆的狀態
+
+  // ✅ 封裝讀取行程的邏輯
+  const fetchItinerary = async () => {
+    const data = await getExclusiveItinerary();
+    setItineraryList(data);
+    if (data.length > 0 && !selectedDate) {
+      setSelectedDate(data[0].date);
+    }
+  };
 
   useEffect(() => {
-    const loadItinerary = async () => {
-      const data = await getExclusiveItinerary();
-
-      setItineraryList(data);
-
-      if (data.length > 0) {
-        setSelectedDate(data[0].date);
-      }
-    };
-
-    loadItinerary();
+    fetchItinerary();
   }, []);
 
   const selectedDateGroup = useMemo(() => {
@@ -72,29 +72,25 @@ function ItineraryPage() {
   }, [selectedDateGroup, selectedPreference]);
 
   const handleSubmitFeedback = async () => {
-    const text = feedback.trim();
-
-    if (!text) {
-      return;
-    }
-
+    if (!feedback.trim()) return;
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-
-      const result = await submitFeedback(text, selectedDate);
-
+      const result = await submitFeedback(feedback, selectedDate);
       if (result.success) {
-        console.log(result.message);
+        setAiResponse(result.message); // 顯示 AI 回覆訊息
         setFeedback("");
+        await fetchItinerary(); // ✅ 成功後重新讀取最新行程
+      } else {
+        alert(result.message);
       }
     } catch (error) {
-      console.error(error);
-      alert("送出失敗");
+      alert("系統錯誤");
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
 
   const selectedPreferenceLabel =
     preferenceOptions.find((item) => item.value === selectedPreference)
@@ -192,6 +188,13 @@ function ItineraryPage() {
           </button>
         </div>
       </section>
+      {/* 顯示 AI 回覆區塊 */}
+      {aiResponse && (
+        <div className="ai-response-box" style={{ background: '#e0f7fa', padding: '10px', margin: '10px 0' }}>
+          <strong>👨‍💼 行程規劃師回覆：</strong>
+          <p>{aiResponse}</p>
+        </div>
+      )}
     </div>
   );
 }
