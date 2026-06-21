@@ -1,0 +1,193 @@
+/* 
+==========================================================================
+頂部黑底奢華 Hero 卡片 (完美還原 196599.jpg 懸浮大圓角質感)
+========================================================================== 
+*/
+
+/* 錄音中 placeholder 紅字閃爍 */
+.feedback-input-wrap input.listening-placeholder::placeholder {
+color: #ef4444;
+font-weight: 600;
+animation: pulseListen 1.5s infinite alternate;
+}
+
+/* 麥克風錄音按鈕 */
+.mic-button {
+background: transparent;
+border: none;
+color: #9ca3af;
+cursor: pointer;
+padding: 8px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.2s ease;
+}
+
+.mic-button:hover {
+color: var(--vip-text-main);
+background-color: #f3f4f6;
+}
+
+/* 錄音運作中狀態 */
+.mic-button.recording {
+background-color: rgba(239, 68, 68, 0.1);
+color: #ef4444;
+animation: pulseRecordCircle 1.2s infinite alternate;
+}
+
+/* 送出按鈕 */
+.send-button {
+background-color: #f3f4f6;
+color: #9ca3af;
+border: none;
+width: 40px;
+height: 40px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+transition: all 0.2s ease;
+flex-shrink: 0;
+}
+
+.send-button:not(:disabled) {
+background-color: #111827;
+color: #ffffff;
+}
+
+.send-button:not(:disabled):hover {
+background-color: var(--vip-gold);
+transform: scale(1.05);
+}
+
+.send-button:active:not(:disabled) {
+transform: scale(0.92);
+}
+
+.itinerary-hero {
+background: linear-gradient(135deg, #151f32 0%, #0b0f19 100%);
+padding: 24px 20px;
+border-radius: 24px;
+box-shadow: 0 12px 30px rgba(11, 15, 25, 0.25);
+margin: 16px;
+border: 1px solid rgba(255, 255, 255, 0.05);
+flex-shrink: 0;
+}
+
+.itinerary-hero h2 {
+font-size: 1.5rem;
+font-weight: 700;
+line-height: 1.3;
+margin-top: 0;
+margin-bottom: 8px;
+color: #ffffff;
+}
+
+.itinerary-hero p {
+color: #94a3b8;
+font-size: 0.9rem;
+line-height: 1.4;
+margin-bottom: 20px;
+}
+
+/* 篩選欄位與 RWD 排版 */
+.itinerary-filters {
+display: flex;
+gap: 16px;
+flex-wrap: wrap;
+}
+
+/* 篩選器膠囊式大按鈕 */
+.itinerary-filter {
+background-color: rgba(255, 255, 255, 0.05);
+border: 1px solid rgba(255, 255, 255, 0.12);
+border-radius: 16px;
+padding: 0 16px;
+height: 52px;
+display: flex;
+align-items: center;
+gap: 12px;
+transition: all 0.2s ease;
+flex: 1;
+min-width: 200px;
+cursor: pointer;
+}
+
+.itinerary-filter:focus-within {
+border-color: var(--vip-gold);
+background-color: rgba(255, 255, 255, 0.08);
+}
+
+.itinerary-filter svg {
+color: var(--vip-gold);
+flex-shrink: 0;
+}
+
+.itinerary-filter select {
+  flex: 1;
+  border: none;
+  background: transparent !important;
+  color: #ffffff !important;
+  outline: none !important;
+  font-size: 14px; /* 搭配高度，字體更精緻 */
+  font-weight: 600;
+  height: 100%;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0 center !important;
+  padding-right: 20px;
+}
+
+.itinerary-filter select option {
+background-color: #111827;
+color: #ffffff;
+}
+
+/* 行動裝置極致適配 */
+@media (max-width: 768px) {
+  .itinerary-feedback {
+    padding: 10px 10px calc(6px + env(safe-area-inset-bottom, 6px));
+  }
+
+  .itinerary-page {
+    padding-bottom: 100px !important;
+  }
+
+  .itinerary-hero {
+    padding: 20px 20px;
+    border-radius: 18px;
+    margin-bottom: 20px;
+  }
+
+  .itinerary-hero h2 {
+    font-size: 24px;
+  }
+
+  .itinerary-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  }
+
+.itinerary-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 16px;
+  height: 38px; /* 完美契合截圖 196601.jpg 的精緻比例 */
+  border-radius: 19px; /* 高度一半，維持完美半圓膠囊 */
+  color: #e5e7eb;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+}

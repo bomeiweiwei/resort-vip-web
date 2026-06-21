@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, UserRound } from "lucide-react";
-import { useOutletContext } from "react-router-dom"; // 1. 引入 context 鉤子
+import { CalendarDays, UserRound, Mic, Send } from "lucide-react";
+import { useOutletContext } from "react-router-dom";
 import { getExclusiveItinerary, submitFeedback } from "../apis/itineraryApi";
+import "../styles/Itinerary.css";
 
 import type {
   ItineraryDateGroup,
   ItinerarySchedule,
 } from "../types/itinerary";
 
-// 2. 將下拉選單選項升級為中英雙語結構
+// 下拉選單選項：中英雙語結構
 const preferenceOptions = [
   { value: "全部偏好", label: { zh: "全部偏好", en: "All Preferences" } },
   { value: "觀光園區", label: { zh: "觀光園區", en: "Theme Park" } },
@@ -17,44 +18,54 @@ const preferenceOptions = [
   { value: "溫泉公園", label: { zh: "溫泉公園", en: "Hot Spring" } },
 ];
 
-// 3. 建立 UI 靜態文字的翻譯字典
+// UI 靜態文字的翻譯字典
 const uiText = {
   heroTitle: { zh: "專屬行程規劃", en: "Itinerary Planning" },
   heroDesc: { zh: "基於您的入住資訊與喜好，為您量身打造。", en: "Tailor-made based on your check-in information and preferences." },
   feedbackTitle: { zh: "行程修改意見", en: "Itinerary Revision Requests" },
-  placeholder: { zh: "想調整什麼行程？支援文字與語音", en: "Any updates? Supports text and voice" },
+  placeholder: { zh: "輸入訊息或按住錄音", en: "Type or hold to record" },
   alertFailed: { zh: "送出失敗", en: "Submission failed" },
   emptyPrefix: { zh: "此日期沒有符合「", en: "There are no schedules matching \"" },
   emptySuffix: { zh: "」的行程。", en: "\" on this date." },
 };
 
 function ItineraryPage() {
-  // 4. 從 React Router 的 Outlet 取得父元件傳下來的語系 (zh 或 en)
-  // 提示：需要在 MainLayout 的 <Outlet context={{ currentLang }} /> 傳入
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
 
+  // 狀態管理
   const [itineraryList, setItineraryList] = useState<ItineraryDateGroup[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedPreference, setSelectedPreference] = useState("全部偏好");
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
 
+  // AI 智慧助理回覆狀態管理
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<"idle" | "thinking" | "responded">("idle");
+
+  // 載入專屬行程
   useEffect(() => {
     const loadItinerary = async () => {
-      const data = await getExclusiveItinerary();
-      
-      setItineraryList(data);
-      if (data.length > 0) {
-        setSelectedDate(data[0].date);
+      try {
+        const data = await getExclusiveItinerary();
+        setItineraryList(data);
+        if (data && data.length > 0) {
+          setSelectedDate(data[0].date);
+        }
+      } catch (error) {
+        console.error("Failed to load itinerary:", error);
       }
     };
     loadItinerary();
   }, []);
 
+  // 取得選定日期的行程群組
   const selectedDateGroup = useMemo(() => {
     return itineraryList.find((item) => item.date === selectedDate);
   }, [itineraryList, selectedDate]);
 
+  // 根據偏好篩選後的行程清單
   const filteredSchedules: ItinerarySchedule[] = useMemo(() => {
     const schedules = selectedDateGroup?.schedules ?? [];
     if (selectedPreference === "全部偏好") {
@@ -63,23 +74,80 @@ function ItineraryPage() {
     return schedules.filter((item) => item.preference === selectedPreference);
   }, [selectedDateGroup, selectedPreference]);
 
+  // 語音錄音控制邏輯：單擊開始錄音，再次單擊送出
+  const handleMicClick = async () => {
+    if (!isRecording) {
+      setIsRecording(true);
+      console.log("Recording started (clicked once)...");
+    } else {
+      setIsRecording(false);
+      console.log("Recording ended (clicked again). Submitting audio...");
+      
+      // 模擬將錄音結果轉為文字並直接自動送出
+      const voiceText = currentLang === "zh" 
+        ? "[語音] 幫我把行程中的午餐往後延半小時" 
+        : "[Voice] Please delay the lunch schedule by 30 minutes";
+
+      try {
+        setIsSubmitting(true);
+        setAiStatus("thinking");
+        const result = await submitFeedback(voiceText);
+        if (result.success) {
+          console.log(result.message);
+          
+          // 模擬 AI 生成奢華度假村助理專屬修正意見
+          setTimeout(() => {
+            setAiStatus("responded");
+            setAiResponse(currentLang === "zh"
+              ? "✨ 好的，已為您將「番割田甕缸雞」的用餐時間調整為 13:30，並自動調順後續溫泉與散策之交通接駁。"
+              : "✨ Sure! I have moved the lunch at 'Roast Chicken Restaurant' to 1:30 PM, and adjusted your subsequent hot spring and walking session."
+            );
+          }, 1500);
+        }
+      } catch (error) {
+        console.error(error);
+        alert(uiText.alertFailed[currentLang]);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  // 送出文字意見邏輯
   const handleSubmitFeedback = async () => {
     const text = feedback.trim();
     if (!text) return;
 
     try {
       setIsSubmitting(true);
+      setAiStatus("thinking");
       const result = await submitFeedback(text);
       if (result.success) {
         console.log(result.message);
         setFeedback("");
+
+        // 模擬 AI 生成奢華度假村助理專屬修正意見
+        setTimeout(() => {
+          setAiStatus("responded");
+          setAiResponse(currentLang === "zh"
+            ? `✨ 已收到您的需求「${text}」。已將第一站兒童遊戲區時間微調，預估避開中午艷陽時段，讓您的體驗更加舒適。`
+            : `✨ Received: "${text}". I have slightly adjusted the park schedule to avoid the peak noon heat.`
+          );
+        }, 1500);
       }
     } catch (error) {
       console.error(error);
-      alert(uiText.alertFailed[currentLang]); // 雙語化 Alert
+      alert(uiText.alertFailed[currentLang]);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // 套用 AI 的修正意見 (模擬重新讀取或通知使用者)
+  const handleApplyAiSuggestion = () => {
+    setAiStatus("idle");
+    setAiResponse(null);
+    console.log("AI Suggestion applied successfully!");
   };
 
   // 取得當前篩選偏好的翻譯標籤
@@ -89,8 +157,9 @@ function ItineraryPage() {
 
   return (
     <div className="itinerary-page">
+      {}
+      {/* 頂部篩選區域 */}
       <section className="itinerary-hero">
-        {/* 雙語化標題與描述 */}
         <h2>{uiText.heroTitle[currentLang]}</h2>
         <p>{uiText.heroDesc[currentLang]}</p>
 
@@ -117,7 +186,7 @@ function ItineraryPage() {
             >
               {preferenceOptions.map((item) => (
                 <option key={item.value} value={item.value}>
-                  {item.label[currentLang]} {/* 雙語化下拉選單名稱 */}
+                  {item.label[currentLang]}
                 </option>
               ))}
             </select>
@@ -125,10 +194,11 @@ function ItineraryPage() {
         </div>
       </section>
 
+      {}
+      {/* 行程時間軸區塊 */}
       <section className="timeline">
         {filteredSchedules.length === 0 && (
           <div className="empty-card">
-            {/* 雙語化空資料提示 */}
             {uiText.emptyPrefix[currentLang]}
             {selectedPreferenceLabel}
             {uiText.emptySuffix[currentLang]}
@@ -139,7 +209,7 @@ function ItineraryPage() {
           <div key={`${item.time}-${item.title}`} className="timeline-row">
             <div className="timeline-dot" />
             <article className="timeline-card">
-              <span>{item.time}</span>
+              <span className="time-badge">{item.time}</span>
               <h3>{item.title}</h3>
               <p>{item.content}</p>
             </article>
@@ -147,15 +217,13 @@ function ItineraryPage() {
         ))}
       </section>
 
+      {}
+      {/* 底部高質感對話與智慧回覆區 */}
       <section className="itinerary-feedback">
-        <div className="feedback-title">
-          <span>▱</span>
-          <h3>{uiText.feedbackTitle[currentLang]}</h3> {/* 雙語化意見標題 */}
-        </div>
-
         <div className="feedback-input-wrap">
           <input
             type="text"
+            className={isRecording ? "listening-placeholder" : ""}
             value={feedback}
             onChange={(event) => setFeedback(event.target.value)}
             onKeyDown={(event) => {
@@ -163,22 +231,57 @@ function ItineraryPage() {
                 handleSubmitFeedback();
               }
             }}
-            placeholder={uiText.placeholder[currentLang]} // 雙語化 Placeholder
+            placeholder={isRecording ? (currentLang === "zh" ? "正在聆聽語音中..." : "Listening...") : uiText.placeholder[currentLang]}
+            disabled={isSubmitting}
           />
 
-          <button type="button" className="voice-button">
-            🎙
+          <button 
+            type="button" 
+            className={`mic-button ${isRecording ? "recording" : ""}`}
+            onClick={handleMicClick}
+          >
+            <Mic size={18} />
           </button>
 
           <button
             type="button"
             className="send-button"
             onClick={handleSubmitFeedback}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !feedback.trim() || isRecording}
           >
-            ➤
+            <Send size={16} />
           </button>
         </div>
+
+        {/* AI 回覆智慧修正意見區 */}
+        {aiStatus === "thinking" && (
+          <div className="ai-response-box">
+            <div className="ai-response-header">
+              <span>🤖 AI Resort Assistant</span>
+              <div className="thinking-dots">
+                <div className="thinking-dot" />
+                <div className="thinking-dot" />
+                <div className="thinking-dot" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {aiStatus === "responded" && aiResponse && (
+          <div className="ai-response-box">
+            <div className="ai-response-header">
+              <span>🤖 AI Resort Assistant</span>
+            </div>
+            <p className="ai-response-content">{aiResponse}</p>
+            <button 
+              type="button" 
+              className="ai-apply-btn"
+              onClick={handleApplyAiSuggestion}
+            >
+              {currentLang === "zh" ? "套用修改" : "Apply Changes"}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
