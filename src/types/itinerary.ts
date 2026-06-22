@@ -12,6 +12,8 @@ export type ItineraryDateGroup = {
 
 export type ItineraryFeedbackRequest = {
   message: string;
+  date: string;
+  lang: string
 };
 
 export type ItineraryFeedbackResponse = {

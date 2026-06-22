@@ -134,7 +134,7 @@ function ItineraryPage() {
   }, [selectedDateGroup, selectedPreference]);
 
   return (
-    <div className="itinerary-page">
+    <div className={`itinerary-page ${aiStatus !== "idle" ? "with-ai-card" : ""}`}>
       {toastMsg && <div className="luxury-toast"><Sparkles size={16} /><span>{toastMsg}</span></div>}
 
       <section className="itinerary-hero">
@@ -174,13 +174,16 @@ function ItineraryPage() {
         ))}
       </section>
 
+      {/* 整合奢華底部控置台 */}
       <section className="itinerary-feedback">
+        {/* 輸入按鈕控制層 */}
         <div className="feedback-input-wrap">
           <input
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder={isRecording ? uiText.recordingPlaceholder[currentLang] : uiText.placeholder[currentLang]}
             disabled={isSubmitting}
+            className={isRecording ? "listening-placeholder" : ""}
           />
           <button className={`mic-button ${isRecording ? "recording" : ""}`} onClick={handleMicClick}>
             <Mic size={18} />
@@ -190,10 +193,26 @@ function ItineraryPage() {
           </button>
         </div>
 
+        {/* AI 回覆卡片區塊 - 透過 CSS flex-direction 反轉，會自動浮現於輸入框上方 */}
         {aiStatus !== "idle" && (
           <div className="ai-response-area">
+            <div className="ai-header">
+              <span className="ai-icon-wrapper">
+                <Sparkles size={16} className={aiStatus === "thinking" ? "ai-spin" : ""} />
+              </span>
+              <span>{uiText.aiTitle[currentLang]}</span>
+            </div>
             <div className="ai-body">
-              {aiStatus === "thinking" ? <span>{uiText.aiThinking[currentLang]}...</span> : <span>{aiResponse}</span>}
+              {aiStatus === "thinking" ? (
+                <div className="ai-thinking-dots">
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                  <span className="thinking-text">{uiText.aiThinking[currentLang]}</span>
+                </div>
+              ) : (
+                <span>{aiResponse}</span>
+              )}
             </div>
           </div>
         )}

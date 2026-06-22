@@ -22,14 +22,16 @@ export const getExclusiveItinerary = async (): Promise<
 // itineraryApi.ts
 export const submitFeedback = async (
   message: string,
-  date: string // 1. 新增 date 參數
+  date: string, // 1. 新增 date 參數
+  lang: string = "zh"
 ): Promise<ItineraryFeedbackResponse> => {
   const response =
     await apiClient.post<ItineraryFeedbackResponse>(
       "/api/itinerary/feedback",
       {
         message,
-        date // 2. 將 date 放入 Request Body 中送往後端
+        date, // 2. 將 date 放入 Request Body 中送往後端
+        lang
       }
     );
 

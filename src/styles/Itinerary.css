@@ -171,11 +171,21 @@ flex-shrink: 0;
   color: #ffffff;
 }
 
+/* 1. 全域/桌機版設定（如果原本沒有這段，請直接補上） */
+.itinerary-feedback {
+  display: flex;
+  flex-direction: column-reverse; /* 確保輸入框在下，AI 回覆在上方 */
+  
+  /* 🚀 核心修改：加大這裡的數值，就可以完美增加兩個區塊中間的留白 */
+  gap: 24px; 
+}
+
 /* 行動裝置極致適配 */
 @media (max-width: 768px) {
   .itinerary-feedback {
     padding: 10px 10px calc(6px + env(safe-area-inset-bottom, 6px));
   }
+  
 
   .itinerary-page {
     padding-bottom: 100px !important;
@@ -200,7 +210,7 @@ flex-shrink: 0;
 .itinerary-filter {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 20px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0 16px;
@@ -213,7 +223,7 @@ flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
-/* 6. 🎯 重新設計的 AI 回覆卡片區塊 (優化 image_7269be.png 排版) */
+/* 6. 🎯 重新設計的 AI 回覆卡片區塊 */
 .ai-response-area {
   background: #ffffff;
   border-radius: 20px;
