@@ -7,6 +7,7 @@ import MapPage from "./pages/MapPage";
 import LoginPage from "./pages/LoginPage";
 import VipLoginPage from "./pages/VipLoginPage";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import GoogleMapPage from "./pages/GoogleMapPage";
 
 function App() {
   return (
@@ -21,6 +22,8 @@ function App() {
           <Route path="itinerary" element={<ItineraryPage />} />
           <Route path="guide" element={<GuidePage />} />
           <Route path="map" element={<MapPage />} />
+          
+          <Route path="google-map" element={<GoogleMapPage />} />
         </Route>
       </Route>
     </Routes>
