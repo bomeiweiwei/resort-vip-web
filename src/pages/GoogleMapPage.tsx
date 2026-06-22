@@ -50,6 +50,11 @@ export default function GoogleMapPage() {
   const [currentPosition, setCurrentPosition] =
     useState<google.maps.LatLngLiteral | null>(null);
   const [isListOpen, setIsListOpen] = useState(false);
+  const [mapCenter, setMapCenter] =
+    useState<google.maps.LatLngLiteral>({
+      lat: resortPlace.lat,
+      lng: resortPlace.lng,
+    });
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -76,12 +81,18 @@ export default function GoogleMapPage() {
   const moveToPlace = (place: MapPlace) => {
     setSelectedPlace(place);
 
-    mapRef.current?.panTo({
+    const newCenter = {
       lat: place.lat,
       lng: place.lng,
-    });
+    };
 
-    mapRef.current?.setZoom(place.isResort ? 14 : 15);
+    setMapCenter(newCenter);
+
+    mapRef.current?.panTo(newCenter);
+
+    mapRef.current?.setZoom(
+      place.isResort ? 14 : 15
+    );
   };
 
   const handleUseCurrentOrigin = () => {
@@ -119,9 +130,9 @@ export default function GoogleMapPage() {
       originMode === "current" && currentPosition
         ? currentPosition
         : {
-            lat: resortPlace.lat,
-            lng: resortPlace.lng,
-          };
+          lat: resortPlace.lat,
+          lng: resortPlace.lng,
+        };
 
     const url =
       `https://www.google.com/maps/dir/?api=1` +
@@ -151,18 +162,16 @@ export default function GoogleMapPage() {
       <div className="google-map-origin-buttons">
         <button
           onClick={() => setOriginMode("resort")}
-          className={`google-map-origin-button ${
-            originMode === "resort" ? "active" : ""
-          }`}
+          className={`google-map-origin-button ${originMode === "resort" ? "active" : ""
+            }`}
         >
           從綠舞出發
         </button>
 
         <button
           onClick={handleUseCurrentOrigin}
-          className={`google-map-origin-button ${
-            originMode === "current" ? "active" : ""
-          }`}
+          className={`google-map-origin-button ${originMode === "current" ? "active" : ""
+            }`}
         >
           從現在位置出發
         </button>
@@ -178,9 +187,8 @@ export default function GoogleMapPage() {
       {mapPlaces.map((item) => (
         <div
           key={item.id}
-          className={`google-map-place-card ${
-            selectedPlace?.id === item.id ? "active" : ""
-          }`}
+          className={`google-map-place-card ${selectedPlace?.id === item.id ? "active" : ""
+            }`}
         >
           <div className="google-map-place-name">{item.name}</div>
           <div className="google-map-place-category">{item.category}</div>
@@ -221,10 +229,7 @@ export default function GoogleMapPage() {
         <div className="google-map-container">
           <GoogleMap
             mapContainerClassName="google-map"
-            center={{
-              lat: resortPlace.lat,
-              lng: resortPlace.lng,
-            }}
+            center={mapCenter}
             zoom={12}
             onLoad={(map) => {
               mapRef.current = map;

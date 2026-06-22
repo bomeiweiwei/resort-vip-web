@@ -189,6 +189,7 @@
     z-index: 20;
     display: flex;
     justify-content: flex-end;
+    padding-bottom: 100px;
 }
 
 .google-map-mobile-drawer {
@@ -198,6 +199,7 @@
     background: #ffffff;
     padding: 16px;
     overflow-y: auto;
+    padding-bottom: 100px;
 }
 
 .google-map-mobile-drawer .google-map-side-panel {
