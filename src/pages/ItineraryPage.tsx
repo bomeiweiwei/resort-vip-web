@@ -220,10 +220,14 @@ function ItineraryPage() {
       {}
       {/* 底部高質感對話與智慧回覆區 */}
       <section className="itinerary-feedback">
+        <div className="feedback-title">
+          <span>▱</span>
+          <h3>行程修改意見</h3>
+        </div>
+
         <div className="feedback-input-wrap">
           <input
             type="text"
-            className={isRecording ? "listening-placeholder" : ""}
             value={feedback}
             onChange={(event) => setFeedback(event.target.value)}
             onKeyDown={(event) => {
@@ -251,37 +255,16 @@ function ItineraryPage() {
           >
             <Send size={16} />
           </button>
+
+        </div> 
+      {/* 顯示 AI 回覆區塊 */}
+      {aiResponse && (
+        <div className="ai-response-box" style={{ background: '#e0f7fa', padding: '10px', margin: '10px 0' }}>
+          <strong>👨‍💼 行程規劃師回覆：</strong>
+          <p>{aiResponse}</p>
         </div>
+      )}
 
-        {/* AI 回覆智慧修正意見區 */}
-        {aiStatus === "thinking" && (
-          <div className="ai-response-box">
-            <div className="ai-response-header">
-              <span>🤖 AI Resort Assistant</span>
-              <div className="thinking-dots">
-                <div className="thinking-dot" />
-                <div className="thinking-dot" />
-                <div className="thinking-dot" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {aiStatus === "responded" && aiResponse && (
-          <div className="ai-response-box">
-            <div className="ai-response-header">
-              <span>🤖 AI Resort Assistant</span>
-            </div>
-            <p className="ai-response-content">{aiResponse}</p>
-            <button 
-              type="button" 
-              className="ai-apply-btn"
-              onClick={handleApplyAiSuggestion}
-            >
-              {currentLang === "zh" ? "套用修改" : "Apply Changes"}
-            </button>
-          </div>
-        )}
       </section>
     </div>
   );
