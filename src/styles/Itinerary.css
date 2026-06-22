@@ -1,7 +1,7 @@
 /* 
-==========================================================================
-頂部黑底奢華 Hero 卡片 (完美還原 196599.jpg 懸浮大圓角質感)
-========================================================================== 
+   ==========================================================================
+   RESORT VIP - 行程規劃專屬美化樣式表 (Itinerary.css)
+   ========================================================================== 
 */
 
 :root {
@@ -13,8 +13,7 @@
   --vip-text-main: #111827;
   --vip-text-muted: #4b5563;
   --vip-border: #e5e7eb;
-  --vip-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.03);
-}
+  --vip-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.03);}
 
 /* 錄音中 placeholder 紅字閃爍 */
 .feedback-input-wrap input.listening-placeholder::placeholder {
@@ -213,4 +212,83 @@ flex-shrink: 0;
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
+/* 6. 🎯 重新設計的 AI 回覆卡片區塊 (優化 image_7269be.png 排版) */
+.ai-response-area {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--vip-dark);
+}
+
+.ai-icon-wrapper {
+  color: var(--vip-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-body {
+  color: #334155;
+  font-size: 14.5px;
+  line-height: 1.7;
+  letter-spacing: 0.3px;
+}
+
+/* 按鈕群組排版 */
+.ai-action-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.ai-btn-apply {
+  background-color: var(--vip-dark);
+  color: #ffffff;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-btn-apply:hover {
+  background-color: var(--vip-gold);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.ai-btn-revert {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-btn-revert:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
 }

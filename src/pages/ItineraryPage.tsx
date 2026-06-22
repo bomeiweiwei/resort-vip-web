@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, UserRound, Mic, Send } from "lucide-react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { CalendarDays, UserRound, Mic, Send, Sparkles } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import { getExclusiveItinerary, submitFeedback } from "../apis/itineraryApi";
 import "../styles/Itinerary.css";
@@ -9,7 +9,7 @@ import type {
   ItinerarySchedule,
 } from "../types/itinerary";
 
-// 下拉選單選項：中英雙語結構
+// 篩選偏好
 const preferenceOptions = [
   { value: "全部偏好", label: { zh: "全部偏好", en: "All Preferences" } },
   { value: "觀光園區", label: { zh: "觀光園區", en: "Theme Park" } },
@@ -18,21 +18,24 @@ const preferenceOptions = [
   { value: "溫泉公園", label: { zh: "溫泉公園", en: "Hot Spring" } },
 ];
 
-// UI 靜態文字的翻譯字典
+// 多國語言
 const uiText = {
   heroTitle: { zh: "專屬行程規劃", en: "Itinerary Planning" },
   heroDesc: { zh: "基於您的入住資訊與喜好，為您量身打造。", en: "Tailor-made based on your check-in information and preferences." },
-  feedbackTitle: { zh: "行程修改意見", en: "Itinerary Revision Requests" },
-  placeholder: { zh: "輸入訊息或按住錄音", en: "Type or hold to record" },
-  alertFailed: { zh: "送出失敗", en: "Submission failed" },
+  placeholder: { zh: "輸入調整需求，例如：我想把下午行程延後半小時...", en: "Type your update requests here..." },
+  recordingPlaceholder: { zh: "正在聆聽語音中... 請對著麥克風說話...", en: "Listening... Please speak into the mic..." },
+  alertFailed: { zh: "意見提交失敗，詳細錯誤請見控制台 (F12)", en: "Submission failed, please check Console (F12)" },
   emptyPrefix: { zh: "此日期沒有符合「", en: "There are no schedules matching \"" },
   emptySuffix: { zh: "」的行程。", en: "\" on this date." },
+  aiTitle: { zh: "AI 行程規劃師", en: "AI Itinerary Architect" },
+  aiThinking: { zh: "正在為您重新規劃並調整行程安排", en: "Optimizing and adjusting your VIP schedule" },
 };
 
 function ItineraryPage() {
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
+  
+  const recognitionRef = useRef<any>(null);
 
-  // 狀態管理
   const [itineraryList, setItineraryList] = useState<ItineraryDateGroup[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedPreference, setSelectedPreference] = useState("全部偏好");
@@ -40,80 +43,63 @@ function ItineraryPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
 
-  // AI 智慧助理回覆狀態管理
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [aiStatus, setAiStatus] = useState<"idle" | "thinking" | "responded">("idle");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // 載入專屬行程
-  useEffect(() => {
-    const loadItinerary = async () => {
-      try {
-        const data = await getExclusiveItinerary();
-        setItineraryList(data);
-        if (data && data.length > 0) {
-          setSelectedDate(data[0].date);
-        }
-      } catch (error) {
-        console.error("Failed to load itinerary:", error);
-      }
-    };
-    loadItinerary();
-  }, []);
-
-  // 取得選定日期的行程群組
-  const selectedDateGroup = useMemo(() => {
-    return itineraryList.find((item) => item.date === selectedDate);
-  }, [itineraryList, selectedDate]);
-
-  // 根據偏好篩選後的行程清單
-  const filteredSchedules: ItinerarySchedule[] = useMemo(() => {
-    const schedules = selectedDateGroup?.schedules ?? [];
-    if (selectedPreference === "全部偏好") {
-      return schedules;
-    }
-    return schedules.filter((item) => item.preference === selectedPreference);
-  }, [selectedDateGroup, selectedPreference]);
-
-  // 語音錄音控制邏輯：單擊開始錄音，再次單擊送出
-  const handleMicClick = async () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      console.log("Recording started (clicked once)...");
-    } else {
-      setIsRecording(false);
-      console.log("Recording ended (clicked again). Submitting audio...");
-      
-      // 模擬將錄音結果轉為文字並直接自動送出
-      const voiceText = currentLang === "zh" 
-        ? "[語音] 幫我把行程中的午餐往後延半小時" 
-        : "[Voice] Please delay the lunch schedule by 30 minutes";
-
-      try {
-        setIsSubmitting(true);
-        setAiStatus("thinking");
-        const result = await submitFeedback(voiceText);
-        if (result.success) {
-          console.log(result.message);
-          
-          // 模擬 AI 生成奢華度假村助理專屬修正意見
-          setTimeout(() => {
-            setAiStatus("responded");
-            setAiResponse(currentLang === "zh"
-              ? "✨ 好的，已為您將「番割田甕缸雞」的用餐時間調整為 13:30，並自動調順後續溫泉與散策之交通接駁。"
-              : "✨ Sure! I have moved the lunch at 'Roast Chicken Restaurant' to 1:30 PM, and adjusted your subsequent hot spring and walking session."
-            );
-          }, 1500);
-        }
-      } catch (error) {
-        console.error(error);
-        alert(uiText.alertFailed[currentLang]);
-      } finally {
-        setIsSubmitting(false);
-      }
+  const fetchItinerary = async () => {
+    const data = await getExclusiveItinerary();
+    setItineraryList(data);
+    if (data.length > 0 && !selectedDate) {
+      setSelectedDate(data[0].date);
     }
   };
 
-  // 送出文字意見邏輯
+  useEffect(() => {
+    fetchItinerary();
+  }, []);
+
+  // 確保語言切換時語音設定同步更新
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.lang = currentLang === "zh" ? "zh-TW" : "en-US";
+      recognitionRef.current.continuous = false; 
+      recognitionRef.current.interimResults = false;
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setFeedback(transcript); 
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsRecording(false);
+        setToastMsg("語音識別失敗，請再試一次");
+      };
+      
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
+    }
+  }, [currentLang]);
+
+  const handleMicClick = () => {
+    if (!recognitionRef.current) {
+      alert("您的瀏覽器不支援語音輸入功能 (請使用 Chrome 或 Edge)");
+      return;
+    }
+
+    if (!isRecording) {
+      setIsRecording(true);
+      recognitionRef.current.start();
+    } else {
+      setIsRecording(false);
+      recognitionRef.current.stop();
+    }
+  };
+
   const handleSubmitFeedback = async () => {
     const text = feedback.trim();
     if (!text) return;
@@ -121,72 +107,53 @@ function ItineraryPage() {
     try {
       setIsSubmitting(true);
       setAiStatus("thinking");
-      const result = await submitFeedback(text);
-      if (result.success) {
-        console.log(result.message);
-        setFeedback("");
+      setAiResponse(null);
 
-        // 模擬 AI 生成奢華度假村助理專屬修正意見
-        setTimeout(() => {
-          setAiStatus("responded");
-          setAiResponse(currentLang === "zh"
-            ? `✨ 已收到您的需求「${text}」。已將第一站兒童遊戲區時間微調，預估避開中午艷陽時段，讓您的體驗更加舒適。`
-            : `✨ Received: "${text}". I have slightly adjusted the park schedule to avoid the peak noon heat.`
-          );
-        }, 1500);
+      const result = await submitFeedback(text, selectedDate);
+      if (result.success) {
+        setAiStatus("responded");
+        setAiResponse(result.message);
+        setFeedback("");
+        await fetchItinerary();
+      } else {
+        alert(result.message);
+        setAiStatus("idle");
       }
     } catch (error) {
-      console.error(error);
-      alert(uiText.alertFailed[currentLang]);
+      setToastMsg(uiText.alertFailed[currentLang]);
+      setAiStatus("idle");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 套用 AI 的修正意見 (模擬重新讀取或通知使用者)
-  const handleApplyAiSuggestion = () => {
-    setAiStatus("idle");
-    setAiResponse(null);
-    console.log("AI Suggestion applied successfully!");
-  };
-
-  // 取得當前篩選偏好的翻譯標籤
-  const selectedPreferenceLabel =
-    preferenceOptions.find((item) => item.value === selectedPreference)
-      ?.label[currentLang] ?? (currentLang === "zh" ? "全部偏好" : "All Preferences");
+  const selectedDateGroup = useMemo(() => itineraryList.find((item) => item.date === selectedDate), [itineraryList, selectedDate]);
+  const filteredSchedules = useMemo(() => {
+    const schedules = selectedDateGroup?.schedules ?? [];
+    return selectedPreference === "全部偏好" ? schedules : schedules.filter((item) => item.preference === selectedPreference);
+  }, [selectedDateGroup, selectedPreference]);
 
   return (
     <div className="itinerary-page">
-      {}
-      {/* 頂部篩選區域 */}
+      {toastMsg && <div className="luxury-toast"><Sparkles size={16} /><span>{toastMsg}</span></div>}
+
       <section className="itinerary-hero">
         <h2>{uiText.heroTitle[currentLang]}</h2>
         <p>{uiText.heroDesc[currentLang]}</p>
-
         <div className="itinerary-filters">
           <label className="itinerary-filter">
             <CalendarDays size={18} />
-            <select
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-            >
-              {itineraryList.map((item) => (
-                <option key={item.date} value={item.date}>
-                  {item.date}
-                </option>
-              ))}
+            <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
+              {itineraryList.map((item) => <option key={item.date} value={item.date}>{item.date}</option>)}
             </select>
           </label>
 
           <label className="itinerary-filter">
             <UserRound size={18} />
-            <select
-              value={selectedPreference}
-              onChange={(event) => setSelectedPreference(event.target.value)}
-            >
-              {preferenceOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label[currentLang]}
+            <select value={selectedPreference} onChange={(e) => setSelectedPreference(e.target.value)}>
+              {preferenceOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label[currentLang]}
                 </option>
               ))}
             </select>
@@ -194,17 +161,7 @@ function ItineraryPage() {
         </div>
       </section>
 
-      {}
-      {/* 行程時間軸區塊 */}
       <section className="timeline">
-        {filteredSchedules.length === 0 && (
-          <div className="empty-card">
-            {uiText.emptyPrefix[currentLang]}
-            {selectedPreferenceLabel}
-            {uiText.emptySuffix[currentLang]}
-          </div>
-        )}
-
         {filteredSchedules.map((item) => (
           <div key={`${item.time}-${item.title}`} className="timeline-row">
             <div className="timeline-dot" />
@@ -217,54 +174,29 @@ function ItineraryPage() {
         ))}
       </section>
 
-      {}
-      {/* 底部高質感對話與智慧回覆區 */}
       <section className="itinerary-feedback">
-        <div className="feedback-title">
-          <span>▱</span>
-          <h3>行程修改意見</h3>
-        </div>
-
         <div className="feedback-input-wrap">
           <input
-            type="text"
             value={feedback}
-            onChange={(event) => setFeedback(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                handleSubmitFeedback();
-              }
-            }}
-            placeholder={isRecording ? (currentLang === "zh" ? "正在聆聽語音中..." : "Listening...") : uiText.placeholder[currentLang]}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder={isRecording ? uiText.recordingPlaceholder[currentLang] : uiText.placeholder[currentLang]}
             disabled={isSubmitting}
           />
-
-          <button 
-            type="button" 
-            className={`mic-button ${isRecording ? "recording" : ""}`}
-            onClick={handleMicClick}
-          >
+          <button className={`mic-button ${isRecording ? "recording" : ""}`} onClick={handleMicClick}>
             <Mic size={18} />
           </button>
-
-          <button
-            type="button"
-            className="send-button"
-            onClick={handleSubmitFeedback}
-            disabled={isSubmitting || !feedback.trim() || isRecording}
-          >
+          <button className="send-button" onClick={() => handleSubmitFeedback()} disabled={isSubmitting || !feedback.trim()}>
             <Send size={16} />
           </button>
-
-        </div> 
-      {/* 顯示 AI 回覆區塊 */}
-      {aiResponse && (
-        <div className="ai-response-box" style={{ background: '#e0f7fa', padding: '10px', margin: '10px 0' }}>
-          <strong>👨‍💼 行程規劃師回覆：</strong>
-          <p>{aiResponse}</p>
         </div>
-      )}
 
+        {aiStatus !== "idle" && (
+          <div className="ai-response-area">
+            <div className="ai-body">
+              {aiStatus === "thinking" ? <span>{uiText.aiThinking[currentLang]}...</span> : <span>{aiResponse}</span>}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
