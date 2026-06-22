@@ -49,9 +49,26 @@ function ItineraryPage() {
 
   const fetchItinerary = async () => {
     const data = await getExclusiveItinerary();
-    setItineraryList(data);
+
+    // 🚀 核心優化：將日期由小到大（舊到新，ASC）進行排序，使越前面的天數顯示在最上面
+    const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
+    setItineraryList(sortedData);
+
     if (data.length > 0 && !selectedDate) {
-      setSelectedDate(data[0].date);
+      // 🚀 核心優化：優先預設顯示客戶當前日期行程
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+
+      const hasToday = data.some((item) => item.date === todayStr);
+      if (hasToday) {
+        setSelectedDate(todayStr);
+      } else {
+        setSelectedDate(data[0].date);
+        console.log(`📅 今日無指定行程，預設切換至第一天行程: ${data[0].date}`);
+      }
     }
   };
 
