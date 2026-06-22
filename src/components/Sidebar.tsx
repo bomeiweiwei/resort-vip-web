@@ -22,7 +22,7 @@ const menuItems = [
   },
   {
     label: { zh: "景點地圖", en: "Map" },
-    path: "/map",
+    path: "/google-map",
     icon: Map,
   },
 ];
