@@ -4,6 +4,18 @@
 ========================================================================== 
 */
 
+:root {
+  --vip-gold: #f59e0b;
+  --vip-gold-dark: #d97706;
+  --vip-dark: #111827;
+  --vip-dark-card: #1f2937;
+  --vip-light-bg: #f3f4f6;
+  --vip-text-main: #111827;
+  --vip-text-muted: #4b5563;
+  --vip-border: #e5e7eb;
+  --vip-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.03);
+}
+
 /* 錄音中 placeholder 紅字閃爍 */
 .feedback-input-wrap input.listening-placeholder::placeholder {
 color: #ef4444;
@@ -95,25 +107,36 @@ margin-bottom: 20px;
 
 /* 篩選欄位與 RWD 排版 */
 .itinerary-filters {
-display: flex;
-gap: 16px;
-flex-wrap: wrap;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* 篩選器膠囊式大按鈕 */
 .itinerary-filter {
-background-color: rgba(255, 255, 255, 0.05);
-border: 1px solid rgba(255, 255, 255, 0.12);
-border-radius: 16px;
-padding: 0 16px;
-height: 52px;
-display: flex;
-align-items: center;
-gap: 12px;
-transition: all 0.2s ease;
-flex: 1;
-min-width: 200px;
-cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 18px;
+  height: 52px; /* 🚀 高度微調加高，點擊感更大氣舒服 */
+  border-radius: 20px;
+  color: #e5e7eb;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.itinerary-filter:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.itinerary-filter svg {
+  color: var(--vip-gold); /* 改為亮眼琥珀橘 #f59e0b */
+  flex-shrink: 0;
 }
 
 .itinerary-filter:focus-within {
@@ -132,21 +155,21 @@ flex-shrink: 0;
   background: transparent !important;
   color: #ffffff !important;
   outline: none !important;
-  font-size: 14px; /* 搭配高度，字體更精緻 */
+  font-size: 15px;
   font-weight: 600;
   height: 100%;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important; /* 箭頭也改為亮橘色 */
   background-repeat: no-repeat !important;
   background-position: right 0 center !important;
-  padding-right: 20px;
+  padding-right: 24px;
 }
 
 .itinerary-filter select option {
-background-color: #111827;
-color: #ffffff;
+  background-color: #111827;
+  color: #ffffff;
 }
 
 /* 行動裝置極致適配 */
