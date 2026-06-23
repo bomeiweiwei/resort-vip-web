@@ -1,0 +1,304 @@
+/* 
+   ==========================================================================
+   RESORT VIP - 行程規劃專屬美化樣式表 (Itinerary.css)
+   ========================================================================== 
+*/
+
+:root {
+  --vip-gold: #f59e0b;
+  --vip-gold-dark: #d97706;
+  --vip-dark: #111827;
+  --vip-dark-card: #1f2937;
+  --vip-light-bg: #f3f4f6;
+  --vip-text-main: #111827;
+  --vip-text-muted: #4b5563;
+  --vip-border: #e5e7eb;
+  --vip-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.03);}
+
+/* 錄音中 placeholder 紅字閃爍 */
+.feedback-input-wrap input.listening-placeholder::placeholder {
+color: #ef4444;
+font-weight: 600;
+animation: pulseListen 1.5s infinite alternate;
+}
+
+/* 麥克風錄音按鈕 */
+.mic-button {
+background: transparent;
+border: none;
+color: #9ca3af;
+cursor: pointer;
+padding: 8px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.2s ease;
+}
+
+.mic-button:hover {
+color: var(--vip-text-main);
+background-color: #f3f4f6;
+}
+
+/* 錄音運作中狀態 */
+.mic-button.recording {
+background-color: rgba(239, 68, 68, 0.1);
+color: #ef4444;
+animation: pulseRecordCircle 1.2s infinite alternate;
+}
+
+/* 送出按鈕 */
+.send-button {
+background-color: #f3f4f6;
+color: #9ca3af;
+border: none;
+width: 40px;
+height: 40px;
+border-radius: 50%;
+display: flex;
+align-items: center;
+justify-content: center;
+cursor: pointer;
+transition: all 0.2s ease;
+flex-shrink: 0;
+}
+
+.send-button:not(:disabled) {
+background-color: #111827;
+color: #ffffff;
+}
+
+.send-button:not(:disabled):hover {
+background-color: var(--vip-gold);
+transform: scale(1.05);
+}
+
+.send-button:active:not(:disabled) {
+transform: scale(0.92);
+}
+
+.itinerary-hero {
+background: linear-gradient(135deg, #151f32 0%, #0b0f19 100%);
+padding: 24px 20px;
+border-radius: 24px;
+box-shadow: 0 12px 30px rgba(11, 15, 25, 0.25);
+margin: 16px;
+border: 1px solid rgba(255, 255, 255, 0.05);
+flex-shrink: 0;
+}
+
+.itinerary-hero h2 {
+font-size: 1.5rem;
+font-weight: 700;
+line-height: 1.3;
+margin-top: 0;
+margin-bottom: 8px;
+color: #ffffff;
+}
+
+.itinerary-hero p {
+color: #94a3b8;
+font-size: 0.9rem;
+line-height: 1.4;
+margin-bottom: 20px;
+}
+
+/* 篩選欄位與 RWD 排版 */
+.itinerary-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 篩選器膠囊式大按鈕 */
+.itinerary-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 18px;
+  height: 52px; /* 🚀 高度微調加高，點擊感更大氣舒服 */
+  border-radius: 20px;
+  color: #e5e7eb;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.itinerary-filter:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.itinerary-filter svg {
+  color: var(--vip-gold); /* 改為亮眼琥珀橘 #f59e0b */
+  flex-shrink: 0;
+}
+
+.itinerary-filter:focus-within {
+border-color: var(--vip-gold);
+background-color: rgba(255, 255, 255, 0.08);
+}
+
+.itinerary-filter svg {
+color: var(--vip-gold);
+flex-shrink: 0;
+}
+
+.itinerary-filter select {
+  flex: 1;
+  border: none;
+  background: transparent !important;
+  color: #ffffff !important;
+  outline: none !important;
+  font-size: 15px;
+  font-weight: 600;
+  height: 100%;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important; /* 箭頭也改為亮橘色 */
+  background-repeat: no-repeat !important;
+  background-position: right 0 center !important;
+  padding-right: 24px;
+}
+
+.itinerary-filter select option {
+  background-color: #111827;
+  color: #ffffff;
+}
+
+/* 1. 全域/桌機版設定（如果原本沒有這段，請直接補上） */
+.itinerary-feedback {
+  display: flex;
+  flex-direction: column-reverse; /* 確保輸入框在下，AI 回覆在上方 */
+  
+  /* 🚀 核心修改：加大這裡的數值，就可以完美增加兩個區塊中間的留白 */
+  gap: 24px; 
+}
+
+/* 行動裝置極致適配 */
+@media (max-width: 768px) {
+  .itinerary-feedback {
+    padding: 10px 10px calc(6px + env(safe-area-inset-bottom, 6px));
+  }
+  
+
+  .itinerary-page {
+    padding-bottom: 100px !important;
+  }
+
+  .itinerary-hero {
+    padding: 20px 20px;
+    border-radius: 18px;
+    margin-bottom: 20px;
+  }
+
+  .itinerary-hero h2 {
+    font-size: 24px;
+  }
+
+  .itinerary-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  }
+
+.itinerary-filter {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 16px;
+  height: 38px; /* 完美契合截圖 196601.jpg 的精緻比例 */
+  border-radius: 19px; /* 高度一半，維持完美半圓膠囊 */
+  color: #e5e7eb;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* 6. 🎯 重新設計的 AI 回覆卡片區塊 */
+.ai-response-area {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 18px 20px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--vip-dark);
+}
+
+.ai-icon-wrapper {
+  color: var(--vip-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-body {
+  color: #334155;
+  font-size: 14.5px;
+  line-height: 1.7;
+  letter-spacing: 0.3px;
+}
+
+/* 按鈕群組排版 */
+.ai-action-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.ai-btn-apply {
+  background-color: var(--vip-dark);
+  color: #ffffff;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-btn-apply:hover {
+  background-color: var(--vip-gold);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.ai-btn-revert {
+  background-color: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-btn-revert:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+}

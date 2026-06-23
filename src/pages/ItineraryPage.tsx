@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, UserRound } from "lucide-react";
-import { useOutletContext } from "react-router-dom"; // 1. 引入 context 鉤子
+import { useEffect, useMemo, useState, useRef } from "react";
+import { CalendarDays, UserRound, Mic, Send, Sparkles } from "lucide-react";
+import { useOutletContext } from "react-router-dom";
 import { getExclusiveItinerary, submitFeedback } from "../apis/itineraryApi";
+import "../styles/Itinerary.css";
 
 import type {
   ItineraryDateGroup,
   ItinerarySchedule,
 } from "../types/itinerary";
 
-// 2. 將下拉選單選項升級為中英雙語結構
+// 篩選偏好
 const preferenceOptions = [
   { value: "全部偏好", label: { zh: "全部偏好", en: "All Preferences" } },
   { value: "觀光園區", label: { zh: "觀光園區", en: "Theme Park" } },
@@ -17,51 +18,104 @@ const preferenceOptions = [
   { value: "溫泉公園", label: { zh: "溫泉公園", en: "Hot Spring" } },
 ];
 
-// 3. 建立 UI 靜態文字的翻譯字典
+// 多國語言
 const uiText = {
   heroTitle: { zh: "專屬行程規劃", en: "Itinerary Planning" },
   heroDesc: { zh: "基於您的入住資訊與喜好，為您量身打造。", en: "Tailor-made based on your check-in information and preferences." },
-  feedbackTitle: { zh: "行程修改意見", en: "Itinerary Revision Requests" },
-  placeholder: { zh: "想調整什麼行程？支援文字與語音", en: "Any updates? Supports text and voice" },
-  alertFailed: { zh: "送出失敗", en: "Submission failed" },
+  placeholder: { zh: "輸入調整需求，例如：我想把下午行程延後半小時...", en: "Type your update requests here..." },
+  recordingPlaceholder: { zh: "正在聆聽語音中... 請對著麥克風說話...", en: "Listening... Please speak into the mic..." },
+  alertFailed: { zh: "意見提交失敗，詳細錯誤請見控制台 (F12)", en: "Submission failed, please check Console (F12)" },
   emptyPrefix: { zh: "此日期沒有符合「", en: "There are no schedules matching \"" },
   emptySuffix: { zh: "」的行程。", en: "\" on this date." },
+  aiTitle: { zh: "AI 行程規劃師", en: "AI Itinerary Architect" },
+  aiThinking: { zh: "正在為您重新規劃並調整行程安排", en: "Optimizing and adjusting your VIP schedule" },
 };
 
 function ItineraryPage() {
-  // 4. 從 React Router 的 Outlet 取得父元件傳下來的語系 (zh 或 en)
-  // 提示：需要在 MainLayout 的 <Outlet context={{ currentLang }} /> 傳入
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
+  
+  const recognitionRef = useRef<any>(null);
 
   const [itineraryList, setItineraryList] = useState<ItineraryDateGroup[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedPreference, setSelectedPreference] = useState("全部偏好");
   const [feedback, setFeedback] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+
+  const [aiResponse, setAiResponse] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<"idle" | "thinking" | "responded">("idle");
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const fetchItinerary = async () => {
+    const data = await getExclusiveItinerary();
+
+    // 🚀 核心優化：將日期由小到大（舊到新，ASC）進行排序，使越前面的天數顯示在最上面
+    const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
+    setItineraryList(sortedData);
+
+    if (data.length > 0 && !selectedDate) {
+      // 🚀 核心優化：優先預設顯示客戶當前日期行程
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+
+      const hasToday = data.some((item) => item.date === todayStr);
+      if (hasToday) {
+        setSelectedDate(todayStr);
+      } else {
+        setSelectedDate(data[0].date);
+        console.log(`📅 今日無指定行程，預設切換至第一天行程: ${data[0].date}`);
+      }
+    }
+  };
 
   useEffect(() => {
-    const loadItinerary = async () => {
-      const data = await getExclusiveItinerary();
-      
-      setItineraryList(data);
-      if (data.length > 0) {
-        setSelectedDate(data[0].date);
-      }
-    };
-    loadItinerary();
+    fetchItinerary();
   }, []);
 
-  const selectedDateGroup = useMemo(() => {
-    return itineraryList.find((item) => item.date === selectedDate);
-  }, [itineraryList, selectedDate]);
+  // 確保語言切換時語音設定同步更新
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.lang = currentLang === "zh" ? "zh-TW" : "en-US";
+      recognitionRef.current.continuous = false; 
+      recognitionRef.current.interimResults = false;
 
-  const filteredSchedules: ItinerarySchedule[] = useMemo(() => {
-    const schedules = selectedDateGroup?.schedules ?? [];
-    if (selectedPreference === "全部偏好") {
-      return schedules;
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setFeedback(transcript); 
+        setIsRecording(false);
+      };
+
+      recognitionRef.current.onerror = () => {
+        setIsRecording(false);
+        setToastMsg("語音識別失敗，請再試一次");
+      };
+      
+      recognitionRef.current.onend = () => {
+        setIsRecording(false);
+      };
     }
-    return schedules.filter((item) => item.preference === selectedPreference);
-  }, [selectedDateGroup, selectedPreference]);
+  }, [currentLang]);
+
+  const handleMicClick = () => {
+    if (!recognitionRef.current) {
+      alert("您的瀏覽器不支援語音輸入功能 (請使用 Chrome 或 Edge)");
+      return;
+    }
+
+    if (!isRecording) {
+      setIsRecording(true);
+      recognitionRef.current.start();
+    } else {
+      setIsRecording(false);
+      recognitionRef.current.stop();
+    }
+  };
 
   const handleSubmitFeedback = async () => {
     const text = feedback.trim();
@@ -69,55 +123,54 @@ function ItineraryPage() {
 
     try {
       setIsSubmitting(true);
-      const result = await submitFeedback(text);
+      setAiStatus("thinking");
+      setAiResponse(null);
+
+      const result = await submitFeedback(text, selectedDate);
       if (result.success) {
-        console.log(result.message);
+        setAiStatus("responded");
+        setAiResponse(result.message);
         setFeedback("");
+        await fetchItinerary();
+      } else {
+        alert(result.message);
+        setAiStatus("idle");
       }
     } catch (error) {
-      console.error(error);
-      alert(uiText.alertFailed[currentLang]); // 雙語化 Alert
+      setToastMsg(uiText.alertFailed[currentLang]);
+      setAiStatus("idle");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 取得當前篩選偏好的翻譯標籤
-  const selectedPreferenceLabel =
-    preferenceOptions.find((item) => item.value === selectedPreference)
-      ?.label[currentLang] ?? (currentLang === "zh" ? "全部偏好" : "All Preferences");
+  const selectedDateGroup = useMemo(() => itineraryList.find((item) => item.date === selectedDate), [itineraryList, selectedDate]);
+  const filteredSchedules = useMemo(() => {
+    const schedules = selectedDateGroup?.schedules ?? [];
+    return selectedPreference === "全部偏好" ? schedules : schedules.filter((item) => item.preference === selectedPreference);
+  }, [selectedDateGroup, selectedPreference]);
 
   return (
-    <div className="itinerary-page">
+    <div className={`itinerary-page ${aiStatus !== "idle" ? "with-ai-card" : ""}`}>
+      {toastMsg && <div className="luxury-toast"><Sparkles size={16} /><span>{toastMsg}</span></div>}
+
       <section className="itinerary-hero">
-        {/* 雙語化標題與描述 */}
         <h2>{uiText.heroTitle[currentLang]}</h2>
         <p>{uiText.heroDesc[currentLang]}</p>
-
         <div className="itinerary-filters">
           <label className="itinerary-filter">
             <CalendarDays size={18} />
-            <select
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-            >
-              {itineraryList.map((item) => (
-                <option key={item.date} value={item.date}>
-                  {item.date}
-                </option>
-              ))}
+            <select value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)}>
+              {itineraryList.map((item) => <option key={item.date} value={item.date}>{item.date}</option>)}
             </select>
           </label>
 
           <label className="itinerary-filter">
             <UserRound size={18} />
-            <select
-              value={selectedPreference}
-              onChange={(event) => setSelectedPreference(event.target.value)}
-            >
-              {preferenceOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label[currentLang]} {/* 雙語化下拉選單名稱 */}
+            <select value={selectedPreference} onChange={(e) => setSelectedPreference(e.target.value)}>
+              {preferenceOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label[currentLang]}
                 </option>
               ))}
             </select>
@@ -126,20 +179,11 @@ function ItineraryPage() {
       </section>
 
       <section className="timeline">
-        {filteredSchedules.length === 0 && (
-          <div className="empty-card">
-            {/* 雙語化空資料提示 */}
-            {uiText.emptyPrefix[currentLang]}
-            {selectedPreferenceLabel}
-            {uiText.emptySuffix[currentLang]}
-          </div>
-        )}
-
         {filteredSchedules.map((item) => (
           <div key={`${item.time}-${item.title}`} className="timeline-row">
             <div className="timeline-dot" />
             <article className="timeline-card">
-              <span>{item.time}</span>
+              <span className="time-badge">{item.time}</span>
               <h3>{item.title}</h3>
               <p>{item.content}</p>
             </article>
@@ -147,38 +191,48 @@ function ItineraryPage() {
         ))}
       </section>
 
+      {/* 整合奢華底部控置台 */}
       <section className="itinerary-feedback">
-        <div className="feedback-title">
-          <span>▱</span>
-          <h3>{uiText.feedbackTitle[currentLang]}</h3> {/* 雙語化意見標題 */}
-        </div>
-
+        {/* 輸入按鈕控制層 */}
         <div className="feedback-input-wrap">
           <input
-            type="text"
             value={feedback}
-            onChange={(event) => setFeedback(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                handleSubmitFeedback();
-              }
-            }}
-            placeholder={uiText.placeholder[currentLang]} // 雙語化 Placeholder
-          />
-
-          <button type="button" className="voice-button">
-            🎙
-          </button>
-
-          <button
-            type="button"
-            className="send-button"
-            onClick={handleSubmitFeedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder={isRecording ? uiText.recordingPlaceholder[currentLang] : uiText.placeholder[currentLang]}
             disabled={isSubmitting}
-          >
-            ➤
+            className={isRecording ? "listening-placeholder" : ""}
+          />
+          <button className={`mic-button ${isRecording ? "recording" : ""}`} onClick={handleMicClick}>
+            <Mic size={18} />
+          </button>
+          <button className="send-button" onClick={() => handleSubmitFeedback()} disabled={isSubmitting || !feedback.trim()}>
+            <Send size={16} />
           </button>
         </div>
+
+        {/* AI 回覆卡片區塊 - 透過 CSS flex-direction 反轉，會自動浮現於輸入框上方 */}
+        {aiStatus !== "idle" && (
+          <div className="ai-response-area">
+            <div className="ai-header">
+              <span className="ai-icon-wrapper">
+                <Sparkles size={16} className={aiStatus === "thinking" ? "ai-spin" : ""} />
+              </span>
+              <span>{uiText.aiTitle[currentLang]}</span>
+            </div>
+            <div className="ai-body">
+              {aiStatus === "thinking" ? (
+                <div className="ai-thinking-dots">
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                  <span className="thinking-text">{uiText.aiThinking[currentLang]}</span>
+                </div>
+              ) : (
+                <span>{aiResponse}</span>
+              )}
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
