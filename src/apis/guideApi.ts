@@ -1,14 +1,15 @@
-import axios from "axios";
+// import axios from "axios";
 // 🎯 引入實體 JSON 模擬資料檔
+import apiClient from "./apiClient";
 import guideAnalyzeMock from "../mocks/guide_result.json";
 
 // 🎯 建立 Axios 實例
-const apiClient = axios.create({
-  baseURL: "/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+// const apiClient = axios.create({
+//   baseURL: "/api",
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
+// });
 
 const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
@@ -106,7 +107,7 @@ export const analyzeGuideInput = async (params: AnalyzeInputParams): Promise<Gui
   }
 
   const response = await apiClient.post<GuideResponse>(
-    "/guide/analyze", 
+    "/api/guide/analyze", 
     formData,
     {
       headers: {
