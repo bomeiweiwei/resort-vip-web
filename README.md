@@ -1,283 +1,191 @@
-# VIP Resort AI Assistant Web
+# VIP Resort AI Assistant — Frontend
 
-VIP Resort AI Assistant Web 是一套智慧渡假村會員服務平台前端系統，提供 VIP 旅客個人化旅遊推薦、AI 導覽、景點地圖及智能助理等功能。
-
-本專案採用 React + TypeScript 開發，未來將透過 FastAPI 提供後端 API 與 AI 服務。
+A React SPA for resort VIP guests, providing a personalized AI chat assistant, itinerary planner, tour guide, and resort map. The backend (FastAPI + Azure / Gemini AI + RAG) is under development; all data currently comes from mocks.
 
 ---
 
-## Technology Stack
+## Tech Stack
 
-### Frontend
+| Layer | Libraries |
+|---|---|
+| Framework | React 19, TypeScript ~6, Vite 8 |
+| Routing | React Router DOM 7 |
+| HTTP | Axios |
+| Icons | Lucide React |
+| Linting | ESLint 10, typescript-eslint |
 
-* React 19
-* TypeScript
-* Vite
-* React Router DOM
-* Axios
-* Lucide React
+---
 
-### Backend (Planned)
+## Routes
 
-* FastAPI
-* Python 3.12+
-* Azure API
-* Gemini API
-* RAG
-* Vector Database
+| Path | Component | Access |
+|---|---|---|
+| `/login` | `LoginPage` | Public |
+| `/vip-login?token=<jwt>` | `VipLoginPage` | Public — magic-link entry point |
+| `/assistant` | `AssistantPage` | Protected |
+| `/itinerary` | `ItineraryPage` | Protected |
+| `/guide` | `GuidePage` | Protected |
+| `/map` | `MapPage` | Protected |
+
+`ProtectedRoute` checks `localStorage.customer_access_token`. Unauthenticated requests redirect to `/login`.
+
+### Magic-link login (`/vip-login`)
+
+The backend emails VIP guests a one-time link containing a signed JWT. `VipLoginPage` extracts the token, calls `vipMagicLogin()`, and persists the session identically to password login. Invalid or missing tokens fall back to `/login`.
 
 ---
 
 ## Project Structure
 
-```text
+```
 src/
-├─ apis/
-│  └─ authApi.ts
+├── apis/
+│   ├── apiClient.ts          # Axios instance
+│   ├── authApi.ts            # /api/auth/login, /api/auth/vip-login
+│   ├── assistantApi.ts       # /api/assistant/{send-msg,speech-to-text,text-to-speech}
+│   └── itineraryApi.ts       # /api/itinerary/{exclusive-itinerary,feedback}
 │
-├─ components/
-│  ├─ Header.tsx
-│  └─ Sidebar.tsx
+├── components/
+│   ├── Header.tsx
+│   └── Sidebar.tsx
 │
-├─ layouts/
-│  └─ MainLayout.tsx
+├── layouts/
+│   └── MainLayout.tsx        # Header + Sidebar + <Outlet />
 │
-├─ mocks/
-│  └─ login_success.json
+├── mocks/                    # JSON fixtures for VITE_USE_MOCK=true
 │
-├─ pages/
-│  ├─ LoginPage.tsx
-│  ├─ AssistantPage.tsx
-│  ├─ ItineraryPage.tsx
-│  ├─ GuidePage.tsx
-│  └─ MapPage.tsx
+├── pages/
+│   ├── LoginPage.tsx
+│   ├── VipLoginPage.tsx
+│   ├── AssistantPage.tsx     # Chat UI with voice recording
+│   ├── ItineraryPage.tsx     # Date/preference filtered timeline
+│   ├── GuidePage.tsx
+│   └── MapPage.tsx
 │
-├─ routes/
-│  └─ ProtectedRoute.tsx
+├── routes/
+│   └── ProtectedRoute.tsx
 │
-├─ types/
-│  └─ auth.ts
+├── types/
+│   ├── auth.ts               # LoginRequest, LoginResponse, CustomerProfile
+│   ├── assistant.ts          # SpeechToTextResponse, AssistantResponse
+│   ├── itinerary.ts          # ItinerarySchedule, ItineraryDateGroup
+│   └── chat_message.ts
 │
-├─ App.tsx
-├─ main.tsx
-└─ index.css
+├── App.tsx
+├── main.tsx
+└── index.css
 ```
 
 ---
 
-## Features
-
-### Authentication
-
-* Login Page
-* Mock Login API
-* Protected Route
-* Session Storage
-* Logout
-
-### Layout
-
-* Responsive Layout (RWD)
-* Desktop Sidebar Navigation
-* Mobile Bottom Navigation
-* Shared Header Component
-
-### Main Pages
-
-* Smart Assistant
-* Personalized Itinerary
-* AI Tour Guide
-* Resort Map
-
----
-
-## Environment Variables
-
-### Development
-
-Create:
-
-```text
-.env.development
-```
-
-Example:
-
-```env
-VITE_USE_MOCK=true
-VITE_PROXY_API=http://localhost:8000
-```
-
----
-
-## Mock Mode
-
-When:
-
-```env
-VITE_USE_MOCK=true
-```
-
-Frontend uses:
-
-```text
-src/mocks/
-```
-
-instead of backend APIs.
-
-Example:
-
-```typescript
-const useMock =
-  import.meta.env.VITE_USE_MOCK === "true";
-```
-
----
-
-## Development
-
-Install dependencies:
+## Getting Started
 
 ```bash
 npm install
+npm run dev        # http://localhost:5173
 ```
 
-Start development server:
+### Environment variables
+
+Create `.env.development` in the project root:
+
+```env
+VITE_USE_MOCK=true                      # Use src/mocks/ instead of live backend
+VITE_PROXY_API=http://localhost:8001    # Proxy /api/* to FastAPI when mock is off
+```
+
+When `VITE_USE_MOCK=true`, every API module returns its local JSON fixture and never hits the network. Toggle it off to point at a running FastAPI instance.
+
+---
+
+## Commands
 
 ```bash
-npm run dev
-```
-
-Default URL:
-
-```text
-http://localhost:5173
+npm run dev       # Start Vite dev server
+npm run build     # tsc -b && vite build
+npm run lint      # ESLint
+npm run preview   # Serve the production build locally
 ```
 
 ---
 
-## Build
+## Docker
 
-Production build:
-
-```bash
-npm run build
-```
-
-Preview build:
+Two-stage build — `node:24-alpine` compiles the Vite bundle, `nginx:1.29-alpine` serves it on port 80. `VITE_USE_MOCK` is forced to `false` inside the image.
 
 ```bash
-npm run preview
+# Build frontend image
+docker build --no-cache --build-arg VITE_PROXY_API=http://localhost:8001 -t resort-vip-web .
+
+# Build backend image (run from the FastAPI repo)
+docker build --no-cache -t resort-vip-api .
+
+# Run frontend
+docker run -d --name resort-vip-web -p 5174:80 resort-vip-web
 ```
 
 ---
 
-## Coding Standards
+## API Layer
 
-### React
+All HTTP calls live in `src/apis/`. Components never call Axios directly.
 
-* Functional Components Only
-* React Hooks
-* TypeScript First
-* No Class Components
-
-### Naming
-
-Components:
-
-```text
-PascalCase
-```
-
-Example:
-
-```text
-LoginPage.tsx
-Sidebar.tsx
-```
-
-Functions:
-
-```text
-camelCase
-```
-
-Example:
+Mock-guard pattern used in every API file:
 
 ```typescript
-handleLogin()
-loadProfile()
-```
+const useMock = import.meta.env.VITE_USE_MOCK === "true";
 
-### API Layer
-
-All API requests must be placed inside:
-
-```text
-src/apis/
-```
-
-UI components should never directly call axios.
-
-Example:
-
-```typescript
-authApi.ts
-profileApi.ts
-itineraryApi.ts
+export async function someCall(...) {
+  if (useMock) return mockData as SomeType;
+  const { data } = await apiClient.post<SomeType>("/api/...", ...);
+  return data;
+}
 ```
 
 ---
 
-## Future Roadmap
+## Layout & Responsive Design
 
-### Phase 1
+`MainLayout` composes `Header` + `Sidebar` + `<Outlet />`. Breakpoint: **768 px**.
 
-* Login
-* Layout
-* Responsive Design
-
-### Phase 2
-
-* FastAPI Integration
-* User Profile API
-* Resort Recommendation API
-
-### Phase 3
-
-* AI Chat Assistant
-* Azure or Gemini Integration
-* RAG Knowledge Base
-
-### Phase 4
-
-* Image Recognition
-* AI Tour Guide
-* Personalized Recommendation Engine
+- **Desktop** — fixed 320 px sidebar on the left
+- **Mobile** — no sidebar; 76 px bottom navigation bar
 
 ---
 
-## Git Commit Convention
+## Session Storage
 
-Examples:
+After login, two `localStorage` keys are written:
 
-```bash
-feat(frontend): add login page
+| Key | Value |
+|---|---|
+| `customer_access_token` | JWT string |
+| `customer_profile` | JSON-serialized `CustomerProfile` |
 
-feat(frontend): implement protected routes
+Logout clears both keys and redirects to `/login`.
 
-feat(frontend): add responsive layout
+---
 
-refactor(frontend): use authenticated user data in sidebar
+## Coding Conventions
 
-fix(frontend): resolve mobile navigation issue
+- Functional components only — no class components
+- Component filenames: `PascalCase`; handlers and functions: `camelCase`
+- Avoid `any`; use shared types in `src/types/`
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) with a `(frontend)` scope:
+
+```
+feat(frontend): ...
+fix(frontend): ...
+refactor(frontend): ...
 ```
 
 ---
 
-## Notes
+## Roadmap
 
-This project currently uses mock data for frontend development.
-
-Backend integration will be implemented using FastAPI services in future iterations.
+| Phase | Scope |
+|---|---|
+| 1 | Login, layout, responsive design — **done** |
+| 2 | FastAPI integration, user profile API, resort recommendation API |
+| 3 | AI chat assistant, Azure / Gemini integration, RAG knowledge base |
+| 4 | Speech-to-text / text-to-speech, image recognition, personalized recommendations |
