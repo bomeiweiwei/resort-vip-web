@@ -33,3 +33,16 @@ export type CustomerProfile = {
     room_type_name: string | null;
     room_no: string | null;
 };
+
+export type VipMagicLoginResponse = {
+  access_token: string;
+  token_type: string;
+  customer_vip_account_id: string;
+  customer_id: string;
+  login_account: string;
+  full_name: string;
+  email: string;
+  mobile_phone: string;
+  room_type_name: string;
+  room_no: string;
+};

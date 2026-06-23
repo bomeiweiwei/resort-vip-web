@@ -1,0 +1,257 @@
+.google-map-page {
+    padding: 24px;
+}
+
+.google-map-loading {
+    padding: 24px;
+    color: #64748b;
+}
+
+.google-map-header-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+}
+
+.google-map-header-card h2 {
+    margin: 0;
+}
+
+.google-map-header-card p {
+    margin: 8px 0 0;
+    color: #64748b;
+}
+
+.google-map-layout {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    height: 680px;
+}
+
+.google-map-container {
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 520px;
+}
+
+.google-map {
+    width: 100%;
+    height: 100%;
+}
+
+.google-map-desktop-panel {
+    display: block;
+}
+
+.google-map-side-panel {
+    height: 100%;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.google-map-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.google-map-panel-header h3 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.google-map-close-button {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.google-map-desktop-panel .google-map-close-button {
+    display: none;
+}
+
+.google-map-origin-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.google-map-origin-button {
+    padding: 10px;
+    border-radius: 999px;
+    border: 1px solid #ddd;
+    background: #f5f5f5;
+    color: #334155;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.google-map-origin-button.active {
+    border-color: #f59e0b;
+    background: #f59e0b;
+    color: #ffffff;
+}
+
+.google-map-origin-text {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+
+.google-map-place-card {
+    padding: 14px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    border: 1px solid #ddd;
+    background: #ffffff;
+}
+
+.google-map-place-card.active {
+    border: 2px solid #f59e0b;
+    background: #fff7ed;
+}
+
+.google-map-place-name {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.google-map-place-category {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 12px;
+}
+
+.google-map-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.google-map-secondary-button,
+.google-map-primary-button {
+    padding: 9px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.google-map-secondary-button {
+    border: 1px solid #f59e0b;
+    background: #ffffff;
+    color: #f59e0b;
+}
+
+.google-map-primary-button {
+    border: 1px solid #f59e0b;
+    background: #f59e0b;
+    color: #ffffff;
+}
+
+.google-map-floating-button {
+    position: fixed;
+    right: 20px;
+    bottom: 96px;
+    z-index: 99999;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+
+    width: 96px;
+    height: 44px;
+
+    border-radius: 999px;
+    border: none;
+    background: #f59e0b;
+    color: #ffffff;
+
+    font-size: 15px;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+    cursor: pointer;
+}
+
+.google-map-mobile-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    padding-bottom: 100px;
+}
+
+.google-map-mobile-drawer {
+    width: 88%;
+    max-width: 360px;
+    height: 100%;
+    background: #ffffff;
+    padding: 16px;
+    overflow-y: auto;
+    padding-bottom: 100px;
+}
+
+.google-map-mobile-drawer .google-map-side-panel {
+    height: auto;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+}
+
+.google-map-info-window {
+    max-width: 220px;
+}
+
+.google-map-info-window div {
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.google-map-info-window p {
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .google-map-page {
+        padding: 12px;
+    }
+
+    .google-map-header-card {
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+
+    .google-map-header-card h2 {
+        font-size: 20px;
+    }
+
+    .google-map-layout {
+        display: block;
+        height: calc(100vh - 180px);
+    }
+
+    .google-map-container {
+        height: 100%;
+        min-height: 420px;
+    }
+
+    .google-map-desktop-panel {
+        display: none;
+    }
+
+    .google-map-floating-button {
+        display: flex;
+        bottom: 96px;
+    }
+}

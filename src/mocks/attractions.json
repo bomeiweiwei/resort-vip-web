@@ -1,0 +1,23 @@
+[
+  {
+    "attraction_id": "1",
+    "place_name": "樂色山積木王國",
+    "category": "親子景點",
+    "latitude": 24.6766,
+    "longitude": 121.7719
+  },
+  {
+    "attraction_id": "2",
+    "place_name": "蘭陽博物館",
+    "category": "文化景點",
+    "latitude": 24.8677,
+    "longitude": 121.8326
+  },
+  {
+    "attraction_id": "3",
+    "place_name": "利澤老街",
+    "category": "在地文化",
+    "latitude": 24.6664,
+    "longitude": 121.8228
+  }
+]
