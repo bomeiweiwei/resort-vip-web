@@ -17,6 +17,8 @@ export type LoginResponse = {
 
     room_type_name: string | null;
     room_no: string | null;
+
+    country_code: string | null;
 };
 
 export type CustomerProfile = {
@@ -32,6 +34,8 @@ export type CustomerProfile = {
 
     room_type_name: string | null;
     room_no: string | null;
+
+    country_code: string | null;
 };
 
 export type VipMagicLoginResponse = {
@@ -45,4 +49,5 @@ export type VipMagicLoginResponse = {
   mobile_phone: string;
   room_type_name: string;
   room_no: string;
+  country_code: string;
 };
