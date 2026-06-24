@@ -3,6 +3,7 @@ import { MapPin, Mic, Pause, Play, Send, Square, AlertCircle } from "lucide-reac
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 // 🎯 匯入統一管理的 API 函數 (指向相對路徑 src/apis/guideApi.ts)
 import { analyzeGuideInput } from "../apis/guideApi"; 
+import "../styles/guide.css";
 
 type ChatMessage = {
   id: number;

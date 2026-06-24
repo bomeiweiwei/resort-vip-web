@@ -3,6 +3,7 @@ import { Image as ImageIcon } from "lucide-react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 // 🎯 引入統一的多模態分析 API (對應 src/apis/guideApi.ts)
 import { analyzeGuideInput } from "../apis/guideApi";
+import "../styles/guide.css";
 
 const translations = {
   analyzing: { zh: "辨識分析景點資訊...", en: "Identifying attraction info..." },
