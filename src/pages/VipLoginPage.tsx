@@ -32,6 +32,7 @@ function VipLoginPage() {
                         mobile_phone: data.mobile_phone,
                         room_type_name: data.room_type_name,
                         room_no: data.room_no,
+                        country_code: data.country_code,
                     })
                 );
 

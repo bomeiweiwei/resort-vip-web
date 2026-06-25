@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Mic, Send } from "lucide-react";
+import { useOutletContext } from "react-router-dom";
 import {
   sendMsg as sendMsgApi,
   speechToText,
@@ -8,11 +9,52 @@ import {
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
 import axios from "axios";
-import type {
-  AssistantResponse
-} from "../types/assistant";
+import type { AssistantResponse } from "../types/assistant";
+import "../styles/assistant.css"; // 引入獨立的 CSS 檔案
+
+// 多國語言字典
+const uiText = {
+  welcomeMsg: {
+    zh: (name: string) => `尊榮的 ${name} 您好，我是您的專屬智能管家。請問有什麼我可以為您服務的？`,
+    en: (name: string) => `Dear ${name}, I am your exclusive smart butler. How may I assist you today? `,
+  },
+  today: { zh: "今天", en: "Today" },
+  thinking: { zh: "🤖 正在思考", en: "🤖 Thinking" },
+  placeholder: { zh: "請輸入您的問題或需求...", en: "Type your question or request here..." },
+  micStart: { zh: "開始錄音", en: "Start recording" },
+  micStop: { zh: "停止錄音", en: "Stop recording" },
+  send: { zh: "傳送", en: "Send" },
+  micError: { 
+    zh: "無法啟用麥克風，請確認瀏覽器已允許麥克風權限後再試一次。", 
+    en: "Unable to access the microphone. Please check your browser permissions and try again." 
+  },
+  voiceReceived: { 
+    zh: "已收到您的語音需求，我會立即為您處理。", 
+    en: "Voice request received. I will process it immediately." 
+  },
+  textReceived: { 
+    zh: "已收到您的需求，我會立即為您處理。", 
+    en: "Request received. I will process it immediately." 
+  },
+  systemError: { 
+    zh: "抱歉，目前系統暫時無法回應，請稍後再試。", 
+    en: "Sorry, the system is temporarily unresponsive. Please try again later." 
+  },
+  timeoutError: { 
+    zh: "系統回應時間過長，請稍後再試。", 
+    en: "System response timeout. Please try again later." 
+  },
+  quickActions: {
+    water: { zh: "需要多送兩瓶水", en: "Need 2 more bottles of water" },
+    spa: { zh: "我想預約 SPA", en: "Book a SPA session" },
+    dinner: { zh: "請推薦今晚餐廳", en: "Dinner restaurant recommendations" },
+    shuttle: { zh: "請幫我接駁車時間", en: "Shuttle bus schedule" }
+  }
+};
 
 function AssistantPage() {
+  const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
+  
   const [message, setMessage] = useState("");
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -22,31 +64,38 @@ function AssistantPage() {
   const [isSending, setIsSending] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const chatListRef = useRef<HTMLDivElement | null>(null);
 
+  // 初始化歡迎訊息
   useEffect(() => {
     const customerProfileText = localStorage.getItem("customer_profile");
 
-    if (!customerProfileText) {
-      return;
-    }
+    if (!customerProfileText) return;
 
     const customerProfile: CustomerProfile = JSON.parse(customerProfileText);
 
-    setMessages([
-      {
-        id: 1,
-        role: "assistant",
-        text: `尊榮的 ${customerProfile.full_name} 您好，我是您的專屬智能管家。請問有什麼我可以為您服務的？無論是客房服務、設施預約，或是交通安排，我都在這裡為您處理。`,
-      },
-    ]);
-  }, []);
+    // 依據當前語言設定初始訊息，且只在最一開始載入
+    if (messages.length === 0) {
+      setMessages([
+        {
+          id: Date.now(),
+          role: "assistant",
+          text: uiText.welcomeMsg[currentLang](customerProfile.full_name),
+        },
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
+  // 精準控制聊天列表內部滾動，並加入 isThinking 觸發
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
-  }, [messages]);
+    if (chatListRef.current) {
+      chatListRef.current.scrollTo({
+        top: chatListRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages, isThinking]);
 
   const downsampleBuffer = (
     buffer: Float32Array,
@@ -66,15 +115,10 @@ function AssistantPage() {
 
     while (offsetResult < result.length) {
       const nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
-
       let accum = 0;
       let count = 0;
 
-      for (
-        let i = offsetBuffer;
-        i < nextOffsetBuffer && i < buffer.length;
-        i += 1
-      ) {
+      for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i += 1) {
         accum += buffer[i];
         count += 1;
       }
@@ -87,10 +131,7 @@ function AssistantPage() {
     return result;
   };
 
-  const encodeWav = (
-    samples: Float32Array,
-    sampleRate: number
-  ): Blob => {
+  const encodeWav = (samples: Float32Array, sampleRate: number): Blob => {
     const bytesPerSample = 2;
     const blockAlign = bytesPerSample;
     const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
@@ -127,55 +168,40 @@ function AssistantPage() {
       );
     }
 
-    return new Blob([view], {
-      type: "audio/wav",
-    });
+    return new Blob([view], { type: "audio/wav" });
   };
 
   const mergeAudioData = (audioData: Float32Array[]): Float32Array => {
     const length = audioData.reduce((sum, item) => sum + item.length, 0);
     const result = new Float32Array(length);
-
     let offset = 0;
-
     audioData.forEach((item) => {
       result.set(item, offset);
       offset += item.length;
     });
-
     return result;
   };
 
   const playTextToSpeech = async (
     text: string,
-    language: AssistantResponse["language"] = "zh-TW"
+    language: AssistantResponse["language"] = currentLang === "zh" ? "zh-TW" : "en-US"
   ) => {
     const audioBlob = await textToSpeech(text, language);
-
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
 
-    audio.onended = () => {
-      URL.revokeObjectURL(audioUrl);
-    };
-
-    audio.onerror = () => {
-      URL.revokeObjectURL(audioUrl);
-    };
+    audio.onended = () => URL.revokeObjectURL(audioUrl);
+    audio.onerror = () => URL.revokeObjectURL(audioUrl);
 
     await audio.play();
   };
 
   const recording = async () => {
-    if (isSending) {
-      return;
-    }
+    if (isSending) return;
+
     if (!isRecording) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const audioContext = new AudioContext();
         const source = audioContext.createMediaStreamSource(stream);
         const processor = audioContext.createScriptProcessor(4096, 1, 1);
@@ -197,17 +223,12 @@ function AssistantPage() {
         setIsRecording(true);
       } catch (error) {
         console.error("microphone permission error:", error);
-
-        const errorMessage: ChatMessage = {
-          id: Date.now(),
-          role: "assistant",
-          text: "無法啟用麥克風，請確認瀏覽器已允許麥克風權限後再試一次。",
-        };
-
-        setMessages((prev) => [...prev, errorMessage]);
+        setMessages((prev) => [
+          ...prev, 
+          { id: Date.now(), role: "assistant", text: uiText.micError[currentLang] }
+        ]);
         setIsRecording(false);
       }
-
       return;
     }
 
@@ -217,26 +238,11 @@ function AssistantPage() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
 
     const audioContext = audioContextRef.current;
-
-    if (!audioContext) {
-      return;
-    }
+    if (!audioContext) return;
 
     const mergedAudioData = mergeAudioData(audioDataRef.current);
-
-    const downsampledAudioData = downsampleBuffer(
-      mergedAudioData,
-      audioContext.sampleRate,
-      16000
-    );
-
+    const downsampledAudioData = downsampleBuffer(mergedAudioData, audioContext.sampleRate, 16000);
     const wavBlob = encodeWav(downsampledAudioData, 16000);
-    // console.log("chunks:", audioDataRef.current.length);
-    // console.log("wav size:", wavBlob.size);
-    // console.log("duration seconds:", downsampledAudioData.length / 16000);
-
-    // const audioUrl = URL.createObjectURL(wavBlob);
-    // console.log("recording url:", audioUrl);
 
     await audioContext.close();
 
@@ -250,50 +256,28 @@ function AssistantPage() {
       setIsThinking(true);
 
       const result = await speechToText(wavBlob);
-
-      const userMessage: ChatMessage = {
-        id: Date.now(),
-        role: "user",
-        text: result.text ?? "",
-      };
-
+      const userMessage: ChatMessage = { id: Date.now(), role: "user", text: result.text ?? "" };
       const assistantMessage: ChatMessage = {
         id: Date.now() + 1,
         role: "assistant",
-        text: result.reply ?? "已收到您的語音需求，我會立即為您處理。",
+        text: result.reply ?? uiText.voiceReceived[currentLang],
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       await playTextToSpeech(assistantMessage.text, result.language);
-
-      
-      // const utterance = new SpeechSynthesisUtterance(assistantMessage.text);
-      // utterance.lang = "zh-TW";
-      // window.speechSynthesis.speak(utterance);
     } catch (error) {
       console.error("speechToText error:", error);
       
-      let errorText = "抱歉，目前系統暫時無法回應，請稍後再試。";
-
+      let errorText = uiText.systemError[currentLang];
       if (axios.isAxiosError(error)) {
         if (error.code === "ECONNABORTED") {
-          errorText = "系統回應時間過長，請稍後再試。";
+          errorText = uiText.timeoutError[currentLang];
         } else {
-          errorText =
-            error.response?.data?.message ??
-            error.response?.data?.detail ??
-            error.message ??
-            errorText;
+          errorText = error.response?.data?.message ?? error.response?.data?.detail ?? error.message ?? errorText;
         }
       }
 
-      const errorMessage: ChatMessage = {
-        id: Date.now() + 1,
-        role: "assistant",
-        text: errorText,
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: "assistant", text: errorText }]);
     } finally {
       setIsThinking(false);
       setIsSending(false);
@@ -301,62 +285,38 @@ function AssistantPage() {
   };
 
   const sendMsg = async () => {
-    if (isSending || isRecording) {
-      return;
-    }
+    if (isSending || isRecording) return;
     const text = message.trim();
+    if (!text) return;
 
-    if (!text) {
-      return;
-    }
-
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      role: "user",
-      text,
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, { id: Date.now(), role: "user", text }]);
     setMessage("");
     setIsSending(true);
 
     try {
-      setIsSending(true);
       setIsThinking(true);
 
       const result = await sendMsgApi(text);
-
       const assistantMessage: ChatMessage = {
         id: Date.now() + 1,
         role: "assistant",
-        text: result.reply ?? "已收到您的需求，我會立即為您處理。",
+        text: result.reply ?? uiText.textReceived[currentLang],
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error("sendMsg error:", error);
 
-      let errorText = "抱歉，目前系統暫時無法回應，請稍後再試。";
-
+      let errorText = uiText.systemError[currentLang];
       if (axios.isAxiosError(error)) {
         if (error.code === "ECONNABORTED") {
-          errorText = "系統回應時間過長，請稍後再試。";
+          errorText = uiText.timeoutError[currentLang];
         } else {
-          errorText =
-            error.response?.data?.message ??
-            error.response?.data?.detail ??
-            error.message ??
-            errorText;
+          errorText = error.response?.data?.message ?? error.response?.data?.detail ?? error.message ?? errorText;
         }
       }
 
-      const errorMessage: ChatMessage = {
-        id: Date.now() + 1,
-        role: "assistant",
-        text: errorText,
-      };
-
-      setMessages((prev) => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, { id: Date.now() + 1, role: "assistant", text: errorText }]);
     } finally {
       setIsThinking(false);
       setIsSending(false);
@@ -371,39 +331,53 @@ function AssistantPage() {
 
   return (
     <div className="assistant-page">
-      <div className="chat-list">
-        <div className="chat-date">今天</div>
+      {/* ⚠️ 修正重點：把所有聊天訊息包在這個 div 裡面 */}
+      <div ref={chatListRef} className="chat-list">
+        <div className="chat-date">{uiText.today[currentLang]}</div>
 
         {messages.map((item) => (
-          <div
-            key={item.id}
-            className={
-              item.role === "user"
-                ? "chat-row user"
-                : "chat-row assistant"
-            }
-          >
+          <div key={item.id} className={`chat-row ${item.role}`}>
             <div className="chat-bubble">{item.text}</div>
           </div>
         ))}
+
         {isThinking && (
-          <div className="message assistant">
-            <div className="message-bubble">
-              🤖 正在思考
-              <span className="thinking-dots"></span>
+          <div className="chat-row assistant">
+            <div className="chat-bubble thinking-bubble">
+              {uiText.thinking[currentLang]}
+              <span className="thinking-dots">
+                <span className="dot"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </span>
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
-      </div>
+      </div> 
+      {/* 聊天區塊結束 */}
 
       <div className="chat-input-area">
+        <div className="quick-actions">
+          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.water[currentLang])}>
+            {uiText.quickActions.water[currentLang]}
+          </button>
+          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.spa[currentLang])}>
+            {uiText.quickActions.spa[currentLang]}
+          </button>
+          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
+            {uiText.quickActions.dinner[currentLang]}
+          </button>
+          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
+            {uiText.quickActions.shuttle[currentLang]}
+          </button>
+        </div>
+
         <div className="chat-input-box">
           <input
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="請輸入您的問題或需求..."
+            placeholder={uiText.placeholder[currentLang]}
           />
 
           <button
@@ -411,7 +385,7 @@ function AssistantPage() {
             className={`icon-button ${isRecording ? "recording" : ""}`}
             onClick={recording}
             disabled={isSending}
-            title={isRecording ? "停止錄音" : "開始錄音"}
+            title={isRecording ? uiText.micStop[currentLang] : uiText.micStart[currentLang]}
           >
             <Mic size={20} />
           </button>
@@ -421,39 +395,9 @@ function AssistantPage() {
             className="send-button"
             onClick={sendMsg}
             disabled={isSending || isRecording}
-            title="傳送"
+            title={uiText.send[currentLang]}
           >
             <Send size={20} />
-          </button>
-        </div>
-
-        <div className="quick-actions">
-          <button
-            disabled={isSending || isRecording}
-            onClick={() => setMessage("需要多送兩瓶水")}
-          >
-            需要多送兩瓶水
-          </button>
-
-          <button
-            disabled={isSending || isRecording}
-            onClick={() => setMessage("我想預約 SPA")}
-          >
-            預約 SPA
-          </button>
-
-          <button
-            disabled={isSending || isRecording}
-            onClick={() => setMessage("請推薦今晚餐廳")}
-          >
-            晚餐餐廳推薦
-          </button>
-
-          <button
-            disabled={isSending || isRecording}
-            onClick={() => setMessage("請幫我接駁車時間")}
-          >
-            接駁車時間
           </button>
         </div>
       </div>
