@@ -6,7 +6,7 @@ const pageTitles: Record<string, string> = {
   "/assistant": "VIP 智能幫手",
   "/itinerary": "專屬行程推薦",
   "/guide": "AI 互動導覽",
-  "/map": "園區與周邊地圖",
+  "/map": "景點地圖",
 };
 
 function MainLayout() {
