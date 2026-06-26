@@ -141,12 +141,12 @@
   font-weight: 500;
 }
 
-.thinking-dots {
+.thinking-assistant-dots {
   display: inline-flex;
   gap: 3px;
 }
 
-.thinking-dots .dot {
+.thinking-assistant-dots .dot {
   width: 5px;
   height: 5px;
   background-color: #94a3b8;
@@ -154,8 +154,8 @@
   animation: bounce 1.4s infinite ease-in-out both;
 }
 
-.thinking-dots .dot:nth-child(1) { animation-delay: -0.32s; }
-.thinking-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+.thinking-assistant-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.thinking-assistant-dots .dot:nth-child(2) { animation-delay: -0.16s; }
 
 /* ========================================= */
 /* 4. 底部輸入區塊 (Input Area)               */

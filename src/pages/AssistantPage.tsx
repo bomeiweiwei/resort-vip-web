@@ -381,7 +381,7 @@ function AssistantPage() {
           <div className="chat-row assistant">
             <div className="chat-bubble thinking-bubble">
               {uiText.thinking[currentLang]}
-              <span className="thinking-dots">
+              <span className="thinking-assistant-dots">
                 <span className="dot"></span>
                 <span className="dot"></span>
                 <span className="dot"></span>
