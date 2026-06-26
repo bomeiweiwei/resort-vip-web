@@ -11,6 +11,8 @@ import type { CustomerProfile } from "../types/auth";
 import axios from "axios";
 import type { AssistantResponse } from "../types/assistant";
 import "../styles/assistant.css"; // 引入獨立的 CSS 檔案
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // 多國語言字典
 const uiText = {
@@ -337,7 +339,15 @@ function AssistantPage() {
 
         {messages.map((item) => (
           <div key={item.id} className={`chat-row ${item.role}`}>
-            <div className="chat-bubble">{item.text}</div>
+            <div className="chat-bubble">
+              {item.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {item.text}
+                </ReactMarkdown>
+              ) : (
+                item.text
+              )}
+            </div>
           </div>
         ))}
 
