@@ -6,7 +6,6 @@ import "../styles/Itinerary.css";
 
 import type {
   ItineraryDateGroup,
-  ItinerarySchedule,
 } from "../types/itinerary";
 
 // 篩選偏好
