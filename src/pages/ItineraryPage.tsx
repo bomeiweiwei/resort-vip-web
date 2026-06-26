@@ -4,9 +4,7 @@ import { useOutletContext } from "react-router-dom";
 import { getExclusiveItinerary, submitFeedback } from "../apis/itineraryApi";
 import "../styles/Itinerary.css";
 
-import type {
-  ItineraryDateGroup,
-} from "../types/itinerary";
+import type { ItineraryDateGroup } from "../types/itinerary";
 
 // 篩選偏好
 const preferenceOptions = [
@@ -46,15 +44,18 @@ function ItineraryPage() {
   const [aiStatus, setAiStatus] = useState<"idle" | "thinking" | "responded">("idle");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
+  // 使用 useRef 來追蹤最新的 selectedDate，避免 useEffect 內 closure 拿到舊日期
+  const selectedDateRef = useRef(selectedDate);
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
+
   const fetchItinerary = async () => {
     const data = await getExclusiveItinerary();
-
-    // 🚀 核心優化：將日期由小到大（舊到新，ASC）進行排序，使越前面的天數顯示在最上面
     const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
     setItineraryList(sortedData);
 
     if (data.length > 0 && !selectedDate) {
-      // 🚀 核心優化：優先預設顯示客戶當前日期行程
       const today = new Date();
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, "0");
@@ -66,7 +67,6 @@ function ItineraryPage() {
         setSelectedDate(todayStr);
       } else {
         setSelectedDate(data[0].date);
-        console.log(`📅 今日無指定行程，預設切換至第一天行程: ${data[0].date}`);
       }
     }
   };
@@ -75,7 +75,48 @@ function ItineraryPage() {
     fetchItinerary();
   }, []);
 
-  // 確保語言切換時語音設定同步更新
+  // 🚀 核心重構：抽離成一個共用的送出 Function，並加入 isVoice 參數控制是否要語音回覆
+  const executeSubmit = async (textToSend: string, isVoice: boolean) => {
+    const text = textToSend.trim();
+    if (!text) return;
+
+    try {
+      setIsSubmitting(true);
+      setAiStatus("thinking");
+      setAiResponse(null);
+
+      // 先停止目前可能正在播放的其他朗讀
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      const result = await submitFeedback(text, selectedDateRef.current);
+      if (result.success) {
+        setAiStatus("responded");
+        setAiResponse(result.message);
+        setFeedback("");
+
+        // 🚀 核心邏輯：如果是語音進來的，結果出來後直接念出
+        if (isVoice && "speechSynthesis" in window) {
+          const utterance = new SpeechSynthesisUtterance(result.message);
+          utterance.lang = currentLang === "zh" ? "zh-TW" : "en-US"; 
+          window.speechSynthesis.speak(utterance);
+        }
+
+        await fetchItinerary();
+      } else {
+        alert(result.message);
+        setAiStatus("idle");
+      }
+    } catch (error) {
+      setToastMsg(uiText.alertFailed[currentLang]);
+      setAiStatus("idle");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // 監聽語音識別的設定
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
@@ -88,6 +129,9 @@ function ItineraryPage() {
         const transcript = event.results[0][0].transcript;
         setFeedback(transcript); 
         setIsRecording(false);
+        
+        // 🚀 核心修改：語音一辨識完，直接把文字丟進 executeSubmit，並標記為語音輸入 (true)
+        executeSubmit(transcript, true);
       };
 
       recognitionRef.current.onerror = () => {
@@ -113,33 +157,6 @@ function ItineraryPage() {
     } else {
       setIsRecording(false);
       recognitionRef.current.stop();
-    }
-  };
-
-  const handleSubmitFeedback = async () => {
-    const text = feedback.trim();
-    if (!text) return;
-
-    try {
-      setIsSubmitting(true);
-      setAiStatus("thinking");
-      setAiResponse(null);
-
-      const result = await submitFeedback(text, selectedDate);
-      if (result.success) {
-        setAiStatus("responded");
-        setAiResponse(result.message);
-        setFeedback("");
-        await fetchItinerary();
-      } else {
-        alert(result.message);
-        setAiStatus("idle");
-      }
-    } catch (error) {
-      setToastMsg(uiText.alertFailed[currentLang]);
-      setAiStatus("idle");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -190,9 +207,8 @@ function ItineraryPage() {
         ))}
       </section>
 
-      {/* 整合奢華底部控置台 */}
+      {/* 整合奢華底部控制台 */}
       <section className="itinerary-feedback">
-        {/* 輸入按鈕控制層 */}
         <div className="feedback-input-wrap">
           <input
             value={feedback}
@@ -204,12 +220,18 @@ function ItineraryPage() {
           <button className={`mic-button ${isRecording ? "recording" : ""}`} onClick={handleMicClick}>
             <Mic size={18} />
           </button>
-          <button className="send-button" onClick={() => handleSubmitFeedback()} disabled={isSubmitting || !feedback.trim()}>
+          
+          {/* 🚀 手動點擊紙飛機送出：判定為純文字模式 (false) */}
+          <button 
+            className="send-button" 
+            onClick={() => executeSubmit(feedback, false)} 
+            disabled={isSubmitting || !feedback.trim()}
+          >
             <Send size={16} />
           </button>
         </div>
 
-        {/* AI 回覆卡片區塊 - 透過 CSS flex-direction 反轉，會自動浮現於輸入框上方 */}
+        {/* AI 回覆卡片區塊 */}
         {aiStatus !== "idle" && (
           <div className="ai-response-area">
             <div className="ai-header">
