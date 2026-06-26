@@ -13,5 +13,6 @@ export type SmartHelperRequest = {
 export type AssistantResponse = {
   text?: string;
   reply: string;
+  speech_reply?: string;
   language?: "zh-TW" | "en-US" | "ja-JP" | "ko-KR";
 };
