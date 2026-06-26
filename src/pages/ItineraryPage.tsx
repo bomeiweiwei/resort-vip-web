@@ -19,9 +19,9 @@ const preferenceOptions = [
 const uiText = {
   heroTitle: { zh: "專屬行程規劃", en: "Itinerary Planning" },
   heroDesc: { zh: "基於您的入住資訊與喜好，為您量身打造。", en: "Tailor-made based on your check-in information and preferences." },
-  placeholder: { zh: "輸入調整需求，例如：我想把下午行程延後半小時...", en: "Type your update requests here..." },
+  placeholder: { zh: "輸入調整需求...", en: "Type your update requests here..." },
   recordingPlaceholder: { zh: "正在聆聽語音中... 請對著麥克風說話...", en: "Listening... Please speak into the mic..." },
-  alertFailed: { zh: "意見提交失敗，詳細錯誤請見控制台 (F12)", en: "Submission failed, please check Console (F12)" },
+  alertFailed: { zh: "意見提交失敗", en: "Submission failed" },
   emptyPrefix: { zh: "此日期沒有符合「", en: "There are no schedules matching \"" },
   emptySuffix: { zh: "」的行程。", en: "\" on this date." },
   aiTitle: { zh: "AI 行程規劃師", en: "AI Itinerary Architect" },
@@ -52,6 +52,7 @@ function ItineraryPage() {
 
   const fetchItinerary = async () => {
     const data = await getExclusiveItinerary();
+    console.log("👉 這是後端吐給前端的真實資料：", data); // 🚀 加這一行
     const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
     setItineraryList(sortedData);
 
@@ -198,10 +199,22 @@ function ItineraryPage() {
         {filteredSchedules.map((item) => (
           <div key={`${item.time}-${item.title}`} className="timeline-row">
             <div className="timeline-dot" />
-            <article className="timeline-card">
-              <span className="time-badge">{item.time}</span>
-              <h3>{item.title}</h3>
-              <p>{item.content}</p>
+            
+            <article className={`timeline-card with-cover ${item.imageUrl ? "has-img" : ""}`}>
+              {/* 上半部：純大圖封面 */}
+              {item.imageUrl && (
+                <div className="timeline-cover">
+                  <img src={item.imageUrl} alt={item.title} loading="lazy" />
+                </div>
+              )}
+              
+              {/* 下半部：文字內容區 */}
+              <div className="timeline-body">
+                {/* 🚀 調整位置：把時間徽章優雅地放在最上方 */}
+                <span className="time-badge">{item.time}</span>
+                <h3>{item.title}</h3>
+                <p>{item.content}</p>
+              </div>
             </article>
           </div>
         ))}

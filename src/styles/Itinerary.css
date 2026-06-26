@@ -83,7 +83,7 @@ background: linear-gradient(135deg, #151f32 0%, #0b0f19 100%);
 padding: 24px 20px;
 border-radius: 24px;
 box-shadow: 0 12px 30px rgba(11, 15, 25, 0.25);
-margin: 16px;
+margin: 1px 1px 1px 1px; /* 左右邊距 16px */
 border: 1px solid rgba(255, 255, 255, 0.05);
 flex-shrink: 0;
 }
@@ -369,5 +369,93 @@ flex-shrink: 0;
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   方案 B：封面大圖風格樣式表
+   ========================================================================== */
+
+.timeline-card.with-cover {
+  padding: 0; /* 關鍵：清空內距讓圖片推滿卡片邊緣 */
+  background-color: var(--vip-dark-card);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* 圖片封面外殼 */
+.timeline-cover {
+  width: 100%;
+  height: 180px; /* 固定大圖高度 */
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timeline-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+/* 懸停時圖片微微放大的奢華動態 */
+.timeline-card.with-cover:hover img {
+  transform: scale(1.05);
+}
+
+/* 🚀 方案 B 核心：漂浮在圖片右上角的高級感時間徽章 */
+.time-badge.floating {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  margin: 0;
+  background: rgba(17, 24, 37, 0.8); /* 帶有暗色透明的底色 */
+  backdrop-filter: blur(6px); /* 磨砂玻璃特效 */
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--vip-gold);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 下半部文字區 */
+.timeline-body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-body h3 {
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.timeline-body p {
+  ccolor: #94a3b8 !important;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 卡片整體懸停效果 */
+.timeline-card.with-cover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* 行動裝置適配 */
+@media (max-width: 768px) {
+  .timeline-cover {
+    height: 150px; /* 手機版略微降低大圖高度，留給螢幕更多空間 */
+  }
+  .timeline-body {
+    padding: 16px 18px; /* 緊湊手機版內距 */
   }
 }

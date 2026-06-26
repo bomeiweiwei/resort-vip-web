@@ -3,6 +3,7 @@ export type ItinerarySchedule = {
   title: string;
   content: string;
   preference: string;
+  imageUrl?: string; // 🚀 新增這一行
 };
 
 export type ItineraryDateGroup = {

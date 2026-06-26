@@ -1,30 +1,20 @@
 [
   {
-    "date": "2026-05-30",
+    "date": "2026-03-07",
     "schedules": [
       {
         "time": "09:00",
-        "title": "專屬管家早餐",
-        "content": "已安排送至房內，提供中西式精緻餐點。",
-        "preference": "餐飲美食"
+        "title": "晨間池畔奢華瑜珈",
+        "content": "在專屬 VVIP 戶外無邊際泳池畔，享受由國際導師帶領的冥想與舒展體驗。",
+        "preference": "在地文化",
+        "imageUrl": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80"
       },
       {
-        "time": "10:30",
-        "title": "預約：私廚料理課程",
-        "content": "於園區廚藝教室，由米其林主廚親自指導。",
-        "preference": "餐飲美食"
-      },
-      {
-        "time": "14:00",
-        "title": "無邊際泳池包場",
-        "content": "您的專屬時段，已備妥香檳與點心。",
-        "preference": "溫泉公園"
-      },
-      {
-        "time": "18:30",
-        "title": "海景日落晚宴",
-        "content": "為您保留視野最佳的窗邊座位。",
-        "preference": "餐飲美食"
+        "time": "12:30",
+        "title": "米其林三星主廚特製午宴",
+        "content": "於度假村專屬隱密包廂，享用當季現撈海鮮與頂級和牛無菜單料理。",
+        "preference": "餐飲美食",
+        "imageUrl": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80"
       }
     ]
   }
