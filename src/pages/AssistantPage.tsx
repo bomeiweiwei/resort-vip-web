@@ -11,6 +11,8 @@ import type { CustomerProfile } from "../types/auth";
 import axios from "axios";
 import type { AssistantResponse } from "../types/assistant";
 import "../styles/assistant.css"; // 引入獨立的 CSS 檔案
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // 多國語言字典
 const uiText = {
@@ -65,6 +67,7 @@ function AssistantPage() {
   const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const chatListRef = useRef<HTMLDivElement | null>(null);
+  const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
 
   // 初始化歡迎訊息
   useEffect(() => {
@@ -256,15 +259,40 @@ function AssistantPage() {
       setIsThinking(true);
 
       const result = await speechToText(wavBlob);
-      const userMessage: ChatMessage = { id: Date.now(), role: "user", text: result.text ?? "" };
+
+      const userText = result.text?.trim() || "語音輸入";
+      const replyText = result.reply?.trim() || uiText.voiceReceived[currentLang];
+      const speechText = result.speech_reply?.trim() || replyText;
+
+      const userMessage: ChatMessage = {
+        id: Date.now(),
+        role: "user",
+        text: userText,
+      };
+
       const assistantMessage: ChatMessage = {
         id: Date.now() + 1,
         role: "assistant",
-        text: result.reply ?? uiText.voiceReceived[currentLang],
+        text: replyText,
+        speech_text: speechText,
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      await playTextToSpeech(assistantMessage.text, result.language);
+
+      setIsThinking(false);
+      setIsSending(false);
+
+      if (speechText.trim()) {
+        setIsGeneratingSpeech(true);
+
+        playTextToSpeech(speechText, result.language)
+          .catch((error) => {
+            console.error("TTS 播放失敗:", error);
+          })
+          .finally(() => {
+            setIsGeneratingSpeech(false);
+          });
+      }
     } catch (error) {
       console.error("speechToText error:", error);
       
@@ -337,7 +365,15 @@ function AssistantPage() {
 
         {messages.map((item) => (
           <div key={item.id} className={`chat-row ${item.role}`}>
-            <div className="chat-bubble">{item.text}</div>
+            <div className="chat-bubble">
+              {item.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {item.text}
+                </ReactMarkdown>
+              ) : (
+                item.text
+              )}
+            </div>
           </div>
         ))}
 
@@ -345,12 +381,17 @@ function AssistantPage() {
           <div className="chat-row assistant">
             <div className="chat-bubble thinking-bubble">
               {uiText.thinking[currentLang]}
-              <span className="thinking-dots">
+              <span className="thinking-assistant-dots">
                 <span className="dot"></span>
                 <span className="dot"></span>
                 <span className="dot"></span>
               </span>
             </div>
+          </div>
+        )}
+        {isGeneratingSpeech && (
+          <div className="speech-generating">
+            🔊 語音產生中，請稍候...
           </div>
         )}
       </div> 
