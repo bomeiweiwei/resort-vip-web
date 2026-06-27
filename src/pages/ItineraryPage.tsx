@@ -30,6 +30,16 @@ const uiText = {
   aiThinking: { zh: "正在為您重新規劃並調整行程安排", en: "Optimizing and adjusting your VIP schedule" },
 };
 
+const getStaticUrl = (url?: string) => {
+  const apiBaseUrl = import.meta.env.VITE_PROXY_API;
+
+  if (!url) return `${apiBaseUrl}/static/images/empty.png`;
+
+  if (url.startsWith("http")) return url;
+
+  return `${apiBaseUrl}${url}`;
+};
+
 function ItineraryPage() {
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
   
@@ -181,10 +191,19 @@ function ItineraryPage() {
         {filteredSchedules.map((item) => (
           <div key={`${item.time}-${item.title}`} className="timeline-row">
             <div className="timeline-dot" />
+
             <article className="timeline-card">
-              <span className="time-badge">{item.time}</span>
-              <h3>{item.title}</h3>
-              <p>{item.content}</p>
+              <img
+                className="timeline-card-image"
+                src={getStaticUrl(item.imageUrl)}
+                alt={item.title}
+              />
+
+              <div className="timeline-card-body">
+                <span className="time-badge">{item.time}</span>
+                <h3>{item.title}</h3>
+                <p>{item.content}</p>
+              </div>
             </article>
           </div>
         ))}
