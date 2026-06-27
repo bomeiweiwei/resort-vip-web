@@ -32,6 +32,8 @@ function ItineraryPage() {
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
   
   const recognitionRef = useRef<any>(null);
+  // 🚀 用於追蹤與控制當前正在播放的音訊物件，防止聲音重疊
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [itineraryList, setItineraryList] = useState<ItineraryDateGroup[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
@@ -52,7 +54,7 @@ function ItineraryPage() {
 
   const fetchItinerary = async () => {
     const data = await getExclusiveItinerary();
-    console.log("👉 這是後端吐給前端的真實資料：", data); // 🚀 加這一行
+    console.log("👉 這是後端吐給前端的真實資料：", data);
     const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
     setItineraryList(sortedData);
 
@@ -86,19 +88,38 @@ function ItineraryPage() {
       setAiStatus("thinking");
       setAiResponse(null);
 
-      // 先停止目前可能正在播放的其他朗讀
+      // 1. 🛡️ 停止目前可能正在播放的任何音訊（包含 HTML5 Audio 與 Web Speech）
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
 
+      // 2. 呼叫後端 API（後端 itinerary_service 的 submit_feedback 會返回 audio_base64）
       const result = await submitFeedback(text, selectedDateRef.current);
+      
       if (result.success) {
         setAiStatus("responded");
         setAiResponse(result.message);
         setFeedback("");
 
-        // 🚀 核心邏輯：如果是語音進來的，結果出來後直接念出
-        if (isVoice && "speechSynthesis" in window) {
+        // 3. 🎙️ 語音導覽播放邏輯：優先採用高擬真 Base64 MP3 音訊
+        if (result.audio_base64) {
+          try {
+            console.log("🔊 正在播放由 Google TTS 產出的管家語音音訊...");
+            const audioUrl = `data:audio/mp3;base64,${result.audio_base64}`;
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+            await audio.play();
+          } catch (audioError) {
+            console.warn("⚠️ 瀏覽器阻擋了自動語音播放，需要使用者點擊互動後才能播放。", audioError);
+          }
+        } 
+        // 4. 📉 降級備用：如果後端未生成語音但又是語音輸入，降級使用本地 Web Speech 朗讀
+        else if (isVoice && "speechSynthesis" in window) {
+          console.log("🔊 降級使用本地 Web Speech API 朗讀...");
           const utterance = new SpeechSynthesisUtterance(result.message);
           utterance.lang = currentLang === "zh" ? "zh-TW" : "en-US"; 
           window.speechSynthesis.speak(utterance);
@@ -131,7 +152,7 @@ function ItineraryPage() {
         setFeedback(transcript); 
         setIsRecording(false);
         
-        // 🚀 核心修改：語音一辨識完，直接把文字丟進 executeSubmit，並標記為語音輸入 (true)
+        // 🚀 語音一辨識完，直接把文字丟進 executeSubmit，並標記為語音輸入 (true)
         executeSubmit(transcript, true);
       };
 
@@ -210,7 +231,6 @@ function ItineraryPage() {
               
               {/* 下半部：文字內容區 */}
               <div className="timeline-body">
-                {/* 🚀 調整位置：把時間徽章優雅地放在最上方 */}
                 <span className="time-badge">{item.time}</span>
                 <h3>{item.title}</h3>
                 <p>{item.content}</p>
@@ -230,17 +250,25 @@ function ItineraryPage() {
             disabled={isSubmitting}
             className={isRecording ? "listening-placeholder" : ""}
           />
-          <button className={`mic-button ${isRecording ? "recording" : ""}`} onClick={handleMicClick}>
+          <button 
+            className={`mic-button ${isRecording ? "recording" : ""}`} 
+            onClick={handleMicClick}
+            disabled={isSubmitting}
+          >
             <Mic size={18} />
           </button>
           
-          {/* 🚀 手動點擊紙飛機送出：判定為純文字模式 (false) */}
+          {/* 🚀 手動或語音發送：當 isSubmitting 為真時，按鈕圖示會旋轉轉為 Sparkles 載入動態 */}
           <button 
             className="send-button" 
             onClick={() => executeSubmit(feedback, false)} 
             disabled={isSubmitting || !feedback.trim()}
           >
-            <Send size={16} />
+            {isSubmitting ? (
+              <Sparkles size={16} className="ai-spin text-amber-500" />
+            ) : (
+              <Send size={16} />
+            )}
           </button>
         </div>
 
