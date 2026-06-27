@@ -180,6 +180,19 @@ flex-shrink: 0;
   gap: 24px; 
 }
 
+
+/* 新增：圖片 */
+.timeline-card-image {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  object-fit: cover;
+  display: block;
+  border-radius: 14px;
+  margin-bottom: 18px;
+  background: #f3f4f6;
+}
+
+
 /* 行動裝置極致適配 */
 @media (max-width: 768px) {
   .itinerary-feedback {
