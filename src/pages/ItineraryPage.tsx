@@ -32,7 +32,7 @@ function ItineraryPage() {
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
   
   const recognitionRef = useRef<any>(null);
-  // 🚀 用於追蹤與控制當前正在播放的音訊物件，防止聲音重疊
+  // 用於追蹤與控制當前正在播放的音訊物件，防止聲音重疊
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [itineraryList, setItineraryList] = useState<ItineraryDateGroup[]>([]);
@@ -52,24 +52,112 @@ function ItineraryPage() {
     selectedDateRef.current = selectedDate;
   }, [selectedDate]);
 
-  const fetchItinerary = async () => {
+  // 🚀 核心修改：超強效智慧配圖與容錯機制
+  const getItineraryImage = (item: any) => {
+    // 1. 優先相容 API / SQL 的蛇型命名 (image_url) 與前端駝峰命名 (imageUrl)
+    const originalImg = item.imageUrl || item.image_url;
+    
+    // 2. 🛡️ 容錯防護：排除資料庫在 NULL 時可能被 stringify 成 "null"、"undefined" 或空字串的狀況
+    if (
+      originalImg && 
+      typeof originalImg === "string" && 
+      originalImg.trim() !== "" && 
+      originalImg !== "null" && 
+      originalImg !== "undefined"
+    ) {
+      return originalImg;
+    }
+
+    // 3. 🧠 語意分析關鍵字配圖：當 AI 產生新行程時，通常不會有圖片 URL，我們用關鍵字進行極其精準的情境圖匹配
+    const title = (item.title || "").toLowerCase();
+    const content = (item.content || "").toLowerCase();
+    const pref = (item.preference || "").trim();
+
+    // 溫泉、湯屋、SPA
+    if (
+      title.includes("溫泉") || title.includes("spa") || title.includes("湯屋") || title.includes("泡湯") || title.includes("泉") ||
+      content.includes("溫泉") || content.includes("spa") || content.includes("湯屋") || content.includes("泡湯")
+    ) {
+      return "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80";
+    }
+
+    // 餐飲、美食、早餐、料理
+    if (
+      title.includes("餐") || title.includes("食") || title.includes("飲") || title.includes("酒") || 
+      title.includes("早") || title.includes("午") || title.includes("晚") || title.includes("饗宴") || 
+      title.includes("料理") || title.includes("咖啡") ||
+      content.includes("餐") || content.includes("美食") || content.includes("料理") || content.includes("吃")
+    ) {
+      return "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=600&q=80";
+    }
+
+    // 傳統、文化、手作、體驗、工坊、職人
+    if (
+      title.includes("文化") || title.includes("手作") || title.includes("體驗") || title.includes("工坊") || 
+      title.includes("歷史") || title.includes("職人") || title.includes("傳統") || title.includes("編織") ||
+      content.includes("文化") || content.includes("手作") || content.includes("體驗") || content.includes("歷史")
+    ) {
+      return "https://images.unsplash.com/photo-1528164344705-47542687000d?auto=format&fit=crop&w=600&q=80";
+    }
+
+    // 觀光、樂園、森林、公園、園區、景點、巡遊
+    if (
+      title.includes("樂園") || title.includes("公園") || title.includes("觀光") || title.includes("遊") || 
+      title.includes("探索") || title.includes("森林") || title.includes("園區") || title.includes("滑索") ||
+      content.includes("樂園") || content.includes("景點") || content.includes("園區") || content.includes("遊覽")
+    ) {
+      return "https://images.unsplash.com/photo-1513829096999-4978602294fc?auto=format&fit=crop&w=600&q=80";
+    }
+
+    // 4. 🗂️ 分類兜底配圖 (防範資料庫 NCHAR/CHAR 類型的空格 Padding 問題，加上 trim() 處理)
+    const fallbackCategoryImages: Record<string, string> = {
+      "餐飲美食": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=600&q=80",
+      "在地文化": "https://images.unsplash.com/photo-1528164344705-47542687000d?auto=format&fit=crop&w=600&q=80",
+      "溫泉公園": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80",
+      "觀光園區": "https://images.unsplash.com/photo-1513829096999-4978602294fc?auto=format&fit=crop&w=600&q=80",
+      "其他": "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=600&q=80",
+    };
+
+    return fallbackCategoryImages[pref] || fallbackCategoryImages["其他"];
+  };
+
+  // 🚀 允許傳入指定的 targetDate 來在載入後強制維持該日期，避免重新渲染時跳掉
+  const fetchItinerary = async (targetDate?: string) => {
     const data = await getExclusiveItinerary();
     console.log("👉 這是後端吐給前端的真實資料：", data);
-    const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
+
+    // 🚀 核心安全過濾：將所有來自後端的日期字串規格化為 YYYY-MM-DD，防範 SQL Server datetime 格式不一致（例如包含 00:00:00）導致比對失敗
+    const sortedData = [...data].map(item => {
+      const cleanDate = item.date.includes(" ") 
+        ? item.date.split(" ")[0] 
+        : item.date.includes("T") 
+          ? item.date.split("T")[0] 
+          : item.date;
+      return { ...item, date: cleanDate };
+    }).sort((a, b) => a.date.localeCompare(b.date));
+
     setItineraryList(sortedData);
 
-    if (data.length > 0 && !selectedDate) {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, "0");
-      const dd = String(today.getDate()).padStart(2, "0");
-      const todayStr = `${yyyy}-${mm}-${dd}`;
+    if (sortedData.length > 0) {
+      // 🚀 優先順序：1. 明確指定的目標日期 (剛編輯完保留) -> 2. 當前選取的日期 -> 3. 今天 -> 4. 行程第一天
+      const activeDate = targetDate || selectedDateRef.current;
+      const hasActiveDate = sortedData.some((item) => item.date === activeDate);
 
-      const hasToday = data.some((item) => item.date === todayStr);
-      if (hasToday) {
-        setSelectedDate(todayStr);
+      if (activeDate && hasActiveDate) {
+        setSelectedDate(activeDate);
       } else {
-        setSelectedDate(data[0].date);
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+
+        const hasToday = sortedData.some((item) => item.date === todayStr);
+        if (hasToday) {
+          setSelectedDate(todayStr);
+        } else {
+          setSelectedDate(sortedData[0].date);
+        }
       }
     }
   };
@@ -82,6 +170,9 @@ function ItineraryPage() {
   const executeSubmit = async (textToSend: string, isVoice: boolean) => {
     const text = textToSend.trim();
     if (!text) return;
+
+    // 🚀 關鍵鎖定：在發送非同步請求前，先牢牢記下使用者「當下正在修改的日期」
+    const dateToPreserve = selectedDateRef.current;
 
     try {
       setIsSubmitting(true);
@@ -98,7 +189,7 @@ function ItineraryPage() {
       }
 
       // 2. 呼叫後端 API（後端 itinerary_service 的 submit_feedback 會返回 audio_base64）
-      const result = await submitFeedback(text, selectedDateRef.current);
+      const result = await submitFeedback(text, dateToPreserve);
       
       if (result.success) {
         setAiStatus("responded");
@@ -125,7 +216,8 @@ function ItineraryPage() {
           window.speechSynthesis.speak(utterance);
         }
 
-        await fetchItinerary();
+        // 🚀 5. 核心修改：重新整理行程時，強制傳入當初修改的日期，使其維持在該日期頁面，解決跳頁問題
+        await fetchItinerary(dateToPreserve);
       } else {
         alert(result.message);
         setAiStatus("idle");
@@ -142,6 +234,7 @@ function ItineraryPage() {
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
+      // 🚀 修正：回復為正確的原生 SpeechRecognition 構造函數，避免 Recognition 未定義報錯
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.lang = currentLang === "zh" ? "zh-TW" : "en-US";
       recognitionRef.current.continuous = false; 
@@ -217,27 +310,31 @@ function ItineraryPage() {
       </section>
 
       <section className="timeline">
-        {filteredSchedules.map((item) => (
-          <div key={`${item.time}-${item.title}`} className="timeline-row">
-            <div className="timeline-dot" />
-            
-            <article className={`timeline-card with-cover ${item.imageUrl ? "has-img" : ""}`}>
-              {/* 上半部：純大圖封面 */}
-              {item.imageUrl && (
-                <div className="timeline-cover">
-                  <img src={item.imageUrl} alt={item.title} loading="lazy" />
-                </div>
-              )}
+        {filteredSchedules.map((item) => {
+          // 🚀 呼叫智慧配圖邏輯，保障無論原圖路徑大小寫、或是新行程，皆能顯示最完美的封面照
+          const displayImage = getItineraryImage(item);
+          return (
+            <div key={`${item.time}-${item.title}`} className="timeline-row">
+              <div className="timeline-dot" />
               
-              {/* 下半部：文字內容區 */}
-              <div className="timeline-body">
-                <span className="time-badge">{item.time}</span>
-                <h3>{item.title}</h3>
-                <p>{item.content}</p>
-              </div>
-            </article>
-          </div>
-        ))}
+              <article className={`timeline-card with-cover ${displayImage ? "has-img" : ""}`}>
+                {/* 上半部：純大圖封面 */}
+                {displayImage && (
+                  <div className="timeline-cover">
+                    <img src={displayImage} alt={item.title} loading="lazy" />
+                  </div>
+                )}
+                
+                {/* 下半部：文字內容區 */}
+                <div className="timeline-body">
+                  <span className="time-badge">{item.time}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.content}</p>
+                </div>
+              </article>
+            </div>
+          );
+        })}
       </section>
 
       {/* 整合奢華底部控制台 */}
@@ -258,7 +355,6 @@ function ItineraryPage() {
             <Mic size={18} />
           </button>
           
-          {/* 🚀 手動或語音發送：當 isSubmitting 為真時，按鈕圖示會旋轉轉為 Sparkles 載入動態 */}
           <button 
             className="send-button" 
             onClick={() => executeSubmit(feedback, false)} 
