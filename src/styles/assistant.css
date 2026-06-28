@@ -1,0 +1,394 @@
+/* styles/assistant.css */
+
+/* ========================================= */
+/* 1. 頁面主體與佈局 (Layout)                 */
+/* ========================================= */
+
+.assistant-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  background-color: #f8fafc; /* 淺灰白背景，提升整體質感 */
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow: hidden; /* 防止整個頁面出現多餘捲軸 */
+}
+
+/* ========================================= */
+/* 2. 聊天訊息區塊 (Chat List & Bubbles)      */
+/* ========================================= */
+
+.chat-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+.chat-date {
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.chat-row {
+  display: flex;
+  width: 100%;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.chat-row.user {
+  justify-content: flex-end;
+}
+
+.chat-row.assistant {
+  justify-content: flex-start;
+}
+
+.chat-bubble {
+  max-width: 78%;
+  padding: 16px 20px;
+  border-radius: 20px;
+  font-size: 16px;
+  line-height: 1.7;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  word-wrap: break-word;
+}
+
+/* 使用者氣泡：度假村品牌橘色 */
+.chat-row.user .chat-bubble {
+  background-color: #f59e0b;
+  color: #ffffff;
+  border-bottom-right-radius: 4px; /* 創造對話框的小尾巴視覺 */
+}
+
+/* 系統氣泡：乾淨白色 */
+.chat-row.assistant .chat-bubble {
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #f1f5f9;
+  border-bottom-left-radius: 4px;
+  line-height: 1.8;
+  white-space: normal;
+}
+
+/* ReactMarkdown 會產生 p、ul、li、strong 等標籤 */
+.chat-row.assistant .chat-bubble p {
+  margin: 0 0 12px;
+}
+
+.chat-row.assistant .chat-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-row.assistant .chat-bubble ul,
+.chat-row.assistant .chat-bubble ol {
+  margin: 8px 0 12px;
+  padding-left: 22px;
+}
+
+.chat-row.assistant .chat-bubble li {
+  margin: 6px 0;
+  line-height: 1.7;
+}
+
+.chat-row.assistant .chat-bubble strong {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.chat-row.assistant .chat-bubble h1,
+.chat-row.assistant .chat-bubble h2,
+.chat-row.assistant .chat-bubble h3 {
+  margin: 14px 0 8px;
+  line-height: 1.4;
+  color: #1e293b;
+}
+
+.chat-row.assistant .chat-bubble h1 {
+  font-size: 20px;
+}
+
+.chat-row.assistant .chat-bubble h2 {
+  font-size: 18px;
+}
+
+.chat-row.assistant .chat-bubble h3 {
+  font-size: 16px;
+}
+
+.speech-generating {
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+  padding: 6px 0;
+}
+
+/* ========================================= */
+/* 3. 動畫與狀態 (Animations & States)        */
+/* ========================================= */
+
+.thinking-bubble {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b !important; /* 蓋過原本字體顏色 */
+  font-weight: 500;
+}
+
+.thinking-assistant-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.thinking-assistant-dots .dot {
+  width: 5px;
+  height: 5px;
+  background-color: #94a3b8;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.thinking-assistant-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.thinking-assistant-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+
+/* ========================================= */
+/* 4. 底部輸入區塊 (Input Area)               */
+/* ========================================= */
+
+.chat-input-area {
+  background-color: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.03);
+  z-index: 10;
+}
+
+/* 快捷按鈕區 (Tag 樣式) */
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none; /* 隱藏捲軸 (Firefox) */
+}
+
+.quick-actions::-webkit-scrollbar {
+  display: none; /* 隱藏捲軸 (Chrome/Safari) */
+}
+
+.quick-actions button {
+  flex: 0 0 auto;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.quick-actions button:hover:not(:disabled) {
+  border-color: #f59e0b;
+  color: #f59e0b;
+  background-color: #fffbeb; /* 淡淡的橘黃色背景 */
+}
+
+.quick-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 輸入框容器 (對齊截圖的藥丸形狀) */
+.chat-input-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 6px 8px 6px 20px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.chat-input-box:focus-within {
+  border-color: #cbd5e1;
+  background-color: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02);
+}
+
+.chat-input-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 16px;
+  color: #1e293b;
+  outline: none;
+}
+
+.chat-input-box input::placeholder {
+  color: #94a3b8;
+}
+
+/* 操作按鈕 (麥克風 / 送出) */
+.icon-button,
+.send-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+/* 麥克風按鈕 - 融合在輸入框內 */
+.icon-button {
+  background-color: transparent;
+  color: #64748b;
+}
+
+.icon-button:hover:not(:disabled) {
+  background-color: #e2e8f0;
+  color: #1e293b;
+}
+
+.icon-button.recording {
+  color: #ef4444;
+  background-color: #fee2e2;
+  animation: pulseRecording 1.5s infinite;
+}
+
+/* 送出按鈕 - 獨立的深色圓形按鈕 */
+.send-button {
+  background-color: #0f172a; /* 深色海軍藍，對齊截圖質感 */
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+}
+
+.send-button:hover:not(:disabled) {
+  background-color: #1e293b;
+  transform: translateY(-1px);
+}
+
+.send-button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.icon-button:disabled,
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* ========================================= */
+/* 5. 手機版響應式 (Mobile Responsive)        */
+/* ========================================= */
+@media (max-width: 768px) {
+  /* 1. 外層：強制鎖死最大高度，不准被內容撐開 */
+  .assistant-page {
+    margin: -20px -16px -96px !important;
+    height: calc(100vh - 64px - 76px) !important;
+    max-height: calc(100vh - 64px - 76px) !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 2. 聊天列表：終極解法，強制從 0 高度開始分配空間，滿了只能內部滾動 */
+  .chat-list {
+    flex: 1 1 0% !important; /* 核心：0% 代表基礎高度為 0，不會被內容撐大 */
+    height: 0 !important;    /* 雙重保險：強制鎖定 */
+    overflow-y: auto !important;
+    padding: 16px 16px 24px !important;
+  }
+
+  /* 3. 輸入框：不受壓縮，永遠保持自己的高度 */
+  .chat-input-area {
+    flex: 0 0 auto !important;
+    background-color: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    
+    padding: 10px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* --- 以下為快捷按鈕與輸入框的緊湊美化（不變） --- */
+  .quick-actions {
+    margin-top: 0;
+    gap: 8px;
+  }
+
+  .quick-actions button {
+    padding: 6px 14px;
+    font-size: 14px;
+  }
+
+  .chat-input-box {
+    padding: 6px 8px 6px 16px;
+  }
+
+  .chat-input-box input {
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .icon-button,
+  .send-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .chat-bubble {
+    max-width: 86%;
+    font-size: 15px;
+    line-height: 1.75;
+    padding: 14px 16px;
+  }
+
+  .chat-row.assistant .chat-bubble p {
+    margin-bottom: 10px;
+  }
+
+  .chat-row.assistant .chat-bubble ul,
+  .chat-row.assistant .chat-bubble ol {
+    padding-left: 20px;
+  }
+}
+
+
+/* ========================================= */
+/* Keyframes 動畫庫                           */
+/* ========================================= */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+@keyframes pulseRecording {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+  70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
