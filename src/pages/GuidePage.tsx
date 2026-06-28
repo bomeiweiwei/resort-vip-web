@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Camera, Image as ImageIcon, Mic, Search, Send, Square } from "lucide-react";
+import { Camera, Image as ImageIcon, Mic, Send, Square } from "lucide-react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 // 🎯 修正引用：依據您的目錄結構，正確指向 styles 資料夾下的 guide.css
 import "../styles/guide.css";

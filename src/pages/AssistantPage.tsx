@@ -185,22 +185,45 @@ function AssistantPage() {
     return result;
   };
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const playTextToSpeech = async (
     text: string,
     language: AssistantResponse["language"] = currentLang === "zh" ? "zh-TW" : "en-US"
   ) => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+
     const audioBlob = await textToSpeech(text, language);
+
     const audioUrl = URL.createObjectURL(audioBlob);
+
     const audio = new Audio(audioUrl);
+    audioRef.current = audio;
 
-    audio.onended = () => URL.revokeObjectURL(audioUrl);
-    audio.onerror = () => URL.revokeObjectURL(audioUrl);
+    await new Promise<void>((resolve, reject) => {
 
-    await audio.play();
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+          resolve();
+        };
+
+        audio.onerror = (e) => {
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+          reject(e);
+        };
+
+        audio.play().catch(reject);
+
+    });
   };
 
   const recording = async () => {
-    if (isSending) return;
+    if (
+        isSending ||
+        isGeneratingSpeech
+    ) return;
 
     if (!isRecording) {
       try {
@@ -313,7 +336,11 @@ function AssistantPage() {
   };
 
   const sendMsg = async () => {
-    if (isSending || isRecording) return;
+    if (
+        isSending ||
+        isRecording ||
+        isGeneratingSpeech
+    ) return;
     const text = message.trim();
     if (!text) return;
 
@@ -399,16 +426,16 @@ function AssistantPage() {
 
       <div className="chat-input-area">
         <div className="quick-actions">
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.water[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.water[currentLang])}>
             {uiText.quickActions.water[currentLang]}
           </button>
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.spa[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.spa[currentLang])}>
             {uiText.quickActions.spa[currentLang]}
           </button>
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
             {uiText.quickActions.dinner[currentLang]}
           </button>
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
             {uiText.quickActions.shuttle[currentLang]}
           </button>
         </div>
@@ -425,7 +452,7 @@ function AssistantPage() {
             type="button"
             className={`icon-button ${isRecording ? "recording" : ""}`}
             onClick={recording}
-            disabled={isSending}
+            disabled={isSending || isGeneratingSpeech}
             title={isRecording ? uiText.micStop[currentLang] : uiText.micStart[currentLang]}
           >
             <Mic size={20} />
@@ -435,7 +462,7 @@ function AssistantPage() {
             type="button"
             className="send-button"
             onClick={sendMsg}
-            disabled={isSending || isRecording}
+            disabled={isSending || isRecording || isGeneratingSpeech}
             title={uiText.send[currentLang]}
           >
             <Send size={20} />
