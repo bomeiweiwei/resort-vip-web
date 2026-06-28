@@ -37,6 +37,7 @@ function LoginPage() {
           mobile_phone: result.mobile_phone,
           room_type_name: result.room_type_name,
           room_no: result.room_no,
+          country_code: result.country_code,
         })
       );
 

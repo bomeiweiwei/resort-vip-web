@@ -3,30 +3,36 @@ import { CalendarDays, Camera, Map, MessageSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import type { CustomerProfile } from "../types/auth";
 
+// 1. 將選單標籤改為中英雙語結構
 const menuItems = [
   {
-    label: "智能幫手",
+    label: { zh: "智能幫手", en: "Assistant" },
     path: "/assistant",
     icon: MessageSquare,
   },
   {
-    label: "行程推薦",
+    label: { zh: "行程推薦", en: "Itinerary" },
     path: "/itinerary",
     icon: CalendarDays,
   },
   {
-    label: "專屬導遊",
+    label: { zh: "專屬導遊", en: "AI Guide" },
     path: "/guide",
     icon: Camera,
   },
   {
-    label: "景點地圖",
-    path: "/map",
+    label: { zh: "景點地圖", en: "Map" },
+    path: "/google-map",
     icon: Map,
   },
 ];
 
-function Sidebar() {
+// 2. 定義 Props，讓父元件把目前的語系傳進來
+type SidebarProps = {
+  currentLang: "zh" | "en";
+};
+
+function Sidebar({ currentLang }: SidebarProps) {
   const [profile, setProfile] = useState({
     name: "",
     roomName: "",
@@ -59,10 +65,15 @@ function Sidebar() {
         <div className="brand-title">RESORT VIP</div>
       </div>
 
+      {/* 3. 訪客資訊區塊也支援雙語翻譯 */}
       <div className="guest-info">
-        <p>歡迎回來</p>
-        <strong>{profile.name || "VIP 貴賓"}</strong>
-        <span>{profile.roomName || "尊榮旅客服務"}</span>
+        <p>{currentLang === "zh" ? "歡迎回來" : "Welcome back"}</p>
+        <strong>
+          {profile.name || (currentLang === "zh" ? "VIP 貴賓" : "VIP Guest")}
+        </strong>
+        <span>
+          {profile.roomName || (currentLang === "zh" ? "尊榮旅客服務" : "Exclusive Service")}
+        </span>
       </div>
 
       <nav className="side-nav">
@@ -78,7 +89,8 @@ function Sidebar() {
               }
             >
               <Icon size={24} />
-              <span>{item.label}</span>
+              {/* 4. 根據當前語系動態顯示對應的文字 */}
+              <span>{item.label[currentLang]}</span>
             </NavLink>
           );
         })}

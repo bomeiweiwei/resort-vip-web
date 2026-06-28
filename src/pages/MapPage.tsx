@@ -1,209 +1,153 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   Marker,
   Polyline,
   TileLayer,
-  useMap
-} from 'react-leaflet';
-import L, { type LatLngExpression } from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { VENUE_DATA, type Venue } from '../data/venues';
-import { useTranslation } from '../hooks/useTranslation';
-import { fetchWeather } from '../services/api';
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
+import L, { type LatLngExpression } from "leaflet";
+import "leaflet/dist/leaflet.css";
+import {
+  VENUE_DATA,
+  AMENITY_ICON,
+  type Venue,
+  type VenueFilter,
+} from "../data/venues";
+import { useTranslation } from "../hooks/useTranslation";
+import { fetchWeather } from "../services/api";
+import {
+  PARK_CENTER,
+  PARK_RADIUS,
+  PARK_ROUTES,
+  PARK_ACCESS_POINTS,
+  PARK_AVOID_NODES,
+  PARK_FORCE_WAYPOINTS,
+  PARK_FIXED_ROUTES,
+} from "../data/parkGraph";
+import userPikminImage from "../assets/user-pikmin-animated.gif";
+import { getAttractions } from "../apis/attractionApi";
 
-type ExtendedVenue = Venue & {
-  amenities?: string[];
-  openRange?: {
-    start?: string;
-    end?: string;
-  };
-  slotMinutes?: number;
-  isBus?: boolean;
-  busDirection?: number;
-};
+type ExtendedVenue = Venue;
 
 type RoutePoint = [number, number];
 
-const FILTER_BUTTONS = [
-  { id: 'all', label: '全部' },
-  { id: 'park', label: '園區設施' },
-  { id: 'surround', label: '周邊' },
-  { id: 'vip', label: 'VIP' }
-] as const;
-
-const ENTRY_COORDS: RoutePoint = [24.703143, 121.820413];
-const PARK_CENTER = L.latLng(24.7022, 121.8198);
-const PARK_RADIUS = 300;
-
-const DAZHONG_NORTH_GO_TIMES = ['09:10', '11:00', '14:20', '16:40'];
-const DAZHONG_NORTH_RETURN_TIMES = ['09:30', '11:20', '14:40', '17:00'];
-
-const AMENITY_ICON: Record<string, { icon: string; label: string }> = {
-  parking: { icon: '🅿️', label: '停車場' },
-  info: { icon: 'ℹ️', label: '服務台' },
-  souvenir: { icon: '🛍️', label: '紀念品' },
-  nursery: { icon: '👶', label: '哺乳室' },
-  restaurant: { icon: '🍽️', label: '餐飲' },
-  wifi: { icon: '📶', label: 'Wi-Fi' },
-  toilet: { icon: '🚻', label: '化妝室' },
-  accessibleToilet: { icon: '♿', label: '無障礙廁所' },
-  firstAid: { icon: '⛑️', label: '醫護站' },
-  aed: { icon: '❤️‍🔥', label: 'AED' }
-};
-
-const PARK_ROUTES: RoutePoint[][] = [
-  [
-    [24.702948, 121.81809],
-    [24.702938, 121.818026],
-    [24.703118, 121.819319]
-  ],
-  [
-    [24.703096, 121.819209],
-    [24.702916, 121.819233],
-    [24.702441, 121.819319],
-    [24.702258, 121.819313],
-    [24.702166, 121.819337],
-    [24.70201, 121.819402],
-    [24.701686, 121.819324],
-    [24.701374, 121.819533],
-    [24.701176, 121.819675],
-    [24.701442, 121.819898],
-    [24.70159, 121.819689],
-    [24.701634, 121.81967],
-    [24.701717, 121.819686],
-    [24.701744, 121.819729],
-    [24.701788, 121.819823],
-    [24.70188, 121.819901],
-    [24.701958, 121.819906],
-    [24.702097, 121.819812],
-    [24.702205, 121.819799],
-    [24.702619, 121.819799],
-    [24.70267, 121.819799],
-    [24.702789, 121.819855],
-    [24.702828, 121.819871],
-    [24.702877, 121.819879],
-    [24.702887, 121.819882],
-    [24.702906, 121.82],
-    [24.702962, 121.820099],
-    [24.70297, 121.820174],
-    [24.703001, 121.820185],
-    [24.703043, 121.820247],
-    [24.703077, 121.820292],
-    [24.703226, 121.820295],
-    [24.703233, 121.8203],
-    [24.703245, 121.8203],
-    [24.703152, 121.819587]
-  ],
-  [
-    [24.703072, 121.820394],
-    [24.70307, 121.8203],
-    [24.70306, 121.820287],
-    [24.70297, 121.820188],
-    [24.702811, 121.820193],
-    [24.702772, 121.820096],
-    [24.702692, 121.820059],
-    [24.702621, 121.819984],
-    [24.702514, 121.819973],
-    [24.702317, 121.819995],
-    [24.702258, 121.820051],
-    [24.702229, 121.820164],
-    [24.702222, 121.820255],
-    [24.702214, 121.820282],
-    [24.702516, 121.820271],
-    [24.702629, 121.820311],
-    [24.702653, 121.820308],
-    [24.702641, 121.820319],
-    [24.702802, 121.820209]
-  ],
-  [
-    [24.702638, 121.820327],
-    [24.70248, 121.8204],
-    [24.702438, 121.820461],
-    [24.702326, 121.820451],
-    [24.702331, 121.820386],
-    [24.702297, 121.8203]
-  ],
-  [
-    [24.702202, 121.820284],
-    [24.70211, 121.820223],
-    [24.702032, 121.820086],
-    [24.701954, 121.819911]
-  ],
-  [
-    [24.701932, 121.820365],
-    [24.701841, 121.820477]
-  ],
-  [
-    [24.70188, 121.82041],
-    [24.701839, 121.82037],
-    [24.701749, 121.820429],
-    [24.701561, 121.820512],
-    [24.701483, 121.820499],
-    [24.701435, 121.820453],
-    [24.701376, 121.820282],
-    [24.701413, 121.820054],
-    [24.701415, 121.819976],
-    [24.701442, 121.819911]
-  ],
-  [
-    [24.702446, 121.819329],
-    [24.702441, 121.819321],
-    [24.702397, 121.819439],
-    [24.702304, 121.819442],
-    [24.702246, 121.819525],
-    [24.702158, 121.819525],
-    [24.702071, 121.819732],
-    [24.702083, 121.819818]
-  ],
-  [
-    [24.702063, 121.81971],
-    [24.702083, 121.81971],
-    [24.70201, 121.819598],
-    [24.701997, 121.819413]
-  ]
+const FILTER_BUTTONS: { id: VenueFilter }[] = [
+  { id: "all" },
+  { id: "park" },
+  { id: "surround" },
+  { id: "vip" },
 ];
 
-const PARK_ACCESS_POINTS: Record<string, RoutePoint> = {
-  露營區: [24.702938, 121.818026]
-};
+const ENTRY_COORDS: RoutePoint = [24.703143, 121.820413];
+const DAZHONG_NORTH_GO_TIMES = ["07:10", "12:30", "16:40", "18:20"];
+const DAZHONG_NORTH_RETURN_TIMES = ["07:25", "12:45", "16:55", "18:35"];
 
-const PARK_AVOID_NODES: Record<string, string[]> = {
-  露營區: ['24.703152,121.819587']
-};
+type SupportedLanguage = "zh" | "en" | "ja" | "ko";
 
-const PARK_FORCE_WAYPOINTS: Record<string, string[]> = {
-  露營區: ['24.703096,121.819209']
-};
-
-const PARK_FIXED_ROUTES: Record<string, RoutePoint[]> = {
-  露營區: [
-    [24.703143, 121.820413],
-    [24.703072, 121.820394],
-    [24.70307, 121.8203],
-    [24.70306, 121.820287],
-    [24.70297, 121.820188],
-    [24.702772, 121.820096],
-    [24.702692, 121.820059],
-    [24.702514, 121.819973],
-    [24.702317, 121.819995],
-    [24.702205, 121.819799],
-    [24.702083, 121.81971],
-    [24.702158, 121.819525],
-    [24.702304, 121.819442],
-    [24.702441, 121.819319],
-    [24.702916, 121.819233],
-    [24.703096, 121.819209],
-    [24.702938, 121.818026]
-  ]
+const VENUE_NAME_TRANSLATIONS: Record<
+  string,
+  Partial<Record<SupportedLanguage, string>>
+> = {
+  售票口: {
+    en: "Ticket Office",
+    ja: "チケット売り場",
+    ko: "매표소",
+  },
+  停車場: {
+    en: "Parking Lot",
+    ja: "駐車場",
+    ko: "주차장",
+  },
+  綠舞島: {
+    en: "Dancewoods Island",
+    ja: "グリーンダンス島",
+    ko: "그린댄스 아일랜드",
+  },
+  綠舞國際觀光飯店: {
+    en: "Dancewoods Hotels & Resorts",
+    ja: "グリーンダンス国際観光ホテル",
+    ko: "댄스우즈 호텔 앤 리조트",
+  },
+  綠舞Villa: {
+    en: "Dancewoods Villa",
+    ja: "グリーンダンス・ヴィラ",
+    ko: "댄스우즈 빌라",
+  },
+  露營區: {
+    en: "Camping Area",
+    ja: "キャンプエリア",
+    ko: "캠핑장",
+  },
+  遊客中心: {
+    en: "Visitor Center",
+    ja: "ビジターセンター",
+    ko: "방문자 센터",
+  },
+  忍者之森廣場: {
+    en: "Ninja Forest Plaza",
+    ja: "忍者の森広場",
+    ko: "닌자 숲 광장",
+  },
+  天空之鏡: {
+    en: "Mirror of the Sky",
+    ja: "天空の鏡",
+    ko: "하늘의 거울",
+  },
+  綠舞美術館: {
+    en: "Dancewoods Art Museum",
+    ja: "グリーンダンス美術館",
+    ko: "댄스우즈 미술관",
+  },
+  探索樂園: {
+    en: "Adventure Park",
+    ja: "アドベンチャーパーク",
+    ko: "어드벤처 파크",
+  },
+  綠舞展演廳: {
+    en: "Dancewoods Performance Hall",
+    ja: "グリーンダンス公演ホール",
+    ko: "댄스우즈 공연장",
+  },
+  島兒鹿鹿: {
+    en: "Deer Island",
+    ja: "シカの島",
+    ko: "사슴 아일랜드",
+  },
+  萌寵互動區: {
+    en: "Animal Interaction Area",
+    ja: "動物ふれあいエリア",
+    ko: "동물 교감 구역",
+  },
+  日光璽舞: {
+    en: "Sunlight Restaurant",
+    ja: "サンライト・レストラン",
+    ko: "선라이트 레스토랑",
+  },
+  高爾夫球室: {
+    en: "Golf Room",
+    ja: "ゴルフルーム",
+    ko: "골프룸",
+  },
+  "大眾北路站 (南下)": {
+    en: "Dazhong North Road Stop (Southbound)",
+    ja: "大衆北路バス停（南行）",
+    ko: "다중북로 정류장 (남행)",
+  },
+  "大眾北路站 (北上)": {
+    en: "Dazhong North Road Stop (Northbound)",
+    ja: "大衆北路バス停（北行）",
+    ko: "다중북로 정류장 (북행)",
+  },
 };
 
 const getWeatherEmoji = (desc: string) => {
   const d = desc.toLowerCase();
-  if (d.includes('雨') || d.includes('rain')) return '🌧️';
-  if (d.includes('雲') || d.includes('cloud')) return '⛅';
-  if (d.includes('晴') || d.includes('clear')) return '☀️';
-  return '🌤️';
+  if (d.includes("雨") || d.includes("rain")) return "🌧️";
+  if (d.includes("雲") || d.includes("cloud")) return "⛅";
+  if (d.includes("晴") || d.includes("clear")) return "☀️";
+  return "🌤️";
 };
 
 const iconCache = new Map<string, L.DivIcon>();
@@ -213,34 +157,81 @@ const getIcon = (emoji: string) => {
     iconCache.set(
       emoji,
       L.divIcon({
-        className: '',
+        className: "",
         html: `<div style="font-size:48px;width:60px;height:60px;transform:scale(.5);transform-origin:top left;display:flex;align-items:center;justify-content:center;">${emoji}</div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
-      })
+        iconSize: [38, 38],
+        iconAnchor: [15, 15],
+      }),
     );
   }
   return iconCache.get(emoji)!;
 };
 
-const userIcon = L.divIcon({
-  className: '',
-  html: '<div style="font-size:30px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));">😄</div>',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18]
+const userIcon = L.icon({
+  iconUrl: userPikminImage,
+  iconSize: [100, 100],
+  iconAnchor: [30, 60],
+  className: "user-location-icon",
 });
+
+const calculateRouteBearing = (start: RoutePoint, end: RoutePoint) => {
+  const startLat = (start[0] * Math.PI) / 180;
+  const startLng = (start[1] * Math.PI) / 180;
+  const endLat = (end[0] * Math.PI) / 180;
+  const endLng = (end[1] * Math.PI) / 180;
+
+  const differenceLng = endLng - startLng;
+
+  const y = Math.sin(differenceLng) * Math.cos(endLat);
+
+  const x =
+    Math.cos(startLat) * Math.sin(endLat) -
+    Math.sin(startLat) * Math.cos(endLat) * Math.cos(differenceLng);
+
+  const bearing = (Math.atan2(y, x) * 180) / Math.PI;
+
+  return (bearing + 360) % 360;
+};
+
+const getRouteFootprintIcon = (bearing: number) =>
+  L.divIcon({
+    className: "",
+    html: `
+      <div
+        style="
+          width:22px;
+          height:22px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          font-size:18px;
+          line-height:1;
+          opacity:0.75;
+          transform:rotate(${bearing}deg);
+          transform-origin:center;
+          filter:
+            drop-shadow(0 1px 1px rgba(255,255,255,.95))
+            drop-shadow(0 0 2px rgba(255,255,255,.8));
+        "
+      >
+        👣
+      </div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
 
 const getNextDeparture = (times: string[]) => {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   for (const time of times) {
-    const [h, m] = time.split(':').map(Number);
+    const [h, m] = time.split(":").map(Number);
     const target = h * 60 + m;
     if (target >= nowMinutes) {
       return {
         time,
-        minutesLeft: target - nowMinutes
+        minutesLeft: target - nowMinutes,
       };
     }
   }
@@ -271,9 +262,7 @@ const buildParkGraph = (routes: RoutePoint[][]): ParkGraph => {
   const addEdge = (a: RoutePoint, b: RoutePoint, isAuto = false) => {
     const keyA = ensureNode(a);
     const keyB = ensureNode(b);
-    const distance = L.latLng(a[0], a[1]).distanceTo(
-      L.latLng(b[0], b[1])
-    );
+    const distance = L.latLng(a[0], a[1]).distanceTo(L.latLng(b[0], b[1]));
     const weight = isAuto ? distance * 6 : distance;
 
     graph.get(keyA)!.push({ key: keyB, weight });
@@ -296,9 +285,7 @@ const buildParkGraph = (routes: RoutePoint[][]): ParkGraph => {
     for (let j = i + 1; j < allPoints.length; j += 1) {
       const a = allPoints[i];
       const b = allPoints[j];
-      const distance = L.latLng(a[0], a[1]).distanceTo(
-        L.latLng(b[0], b[1])
-      );
+      const distance = L.latLng(a[0], a[1]).distanceTo(L.latLng(b[0], b[1]));
 
       if (distance > 0 && distance <= connectThreshold) {
         addEdge(a, b, true);
@@ -314,14 +301,14 @@ const PARK_GRAPH_DATA = buildParkGraph(PARK_ROUTES);
 const findNearestGraphNode = (
   lat: number,
   lng: number,
-  points: Map<string, RoutePoint>
+  points: Map<string, RoutePoint>,
 ) => {
   let bestKey: string | null = null;
   let minDistance = Infinity;
 
   for (const [key, point] of points.entries()) {
     const distance = L.latLng(lat, lng).distanceTo(
-      L.latLng(point[0], point[1])
+      L.latLng(point[0], point[1]),
     );
 
     if (distance < minDistance) {
@@ -337,7 +324,7 @@ const dijkstraShortestPath = (
   graph: Map<string, GraphEdge[]>,
   startKey: string,
   endKey: string,
-  avoidKeys: string[] = []
+  avoidKeys: string[] = [],
 ) => {
   const distances = new Map<string, number>();
   const previous = new Map<string, string | null>();
@@ -395,11 +382,12 @@ const dijkstraShortestPath = (
 };
 
 const isInsidePark = (lat: number, lng: number) =>
-  PARK_CENTER.distanceTo(L.latLng(lat, lng)) <= PARK_RADIUS;
+  L.latLng(PARK_CENTER[0], PARK_CENTER[1]).distanceTo(L.latLng(lat, lng)) <=
+  PARK_RADIUS;
 
 const buildParkNavigationRoute = (
   start: RoutePoint,
-  target: ExtendedVenue
+  target: ExtendedVenue,
 ): RoutePoint[] | null => {
   if (PARK_FIXED_ROUTES[target.name]) {
     return PARK_FIXED_ROUTES[target.name];
@@ -408,19 +396,19 @@ const buildParkNavigationRoute = (
   const startKey = findNearestGraphNode(
     start[0],
     start[1],
-    PARK_GRAPH_DATA.points
+    PARK_GRAPH_DATA.points,
   );
 
   const accessPoint = PARK_ACCESS_POINTS[target.name];
   const destinationPoint: RoutePoint = accessPoint ?? [
     target.coords[0],
-    target.coords[1]
+    target.coords[1],
   ];
 
   const endKey = findNearestGraphNode(
     destinationPoint[0],
     destinationPoint[1],
-    PARK_GRAPH_DATA.points
+    PARK_GRAPH_DATA.points,
   );
 
   if (!startKey || !endKey) return null;
@@ -435,14 +423,14 @@ const buildParkNavigationRoute = (
       PARK_GRAPH_DATA.graph,
       startKey,
       forcedWaypoints[0],
-      avoidKeys
+      avoidKeys,
     );
 
     const secondLeg = dijkstraShortestPath(
       PARK_GRAPH_DATA.graph,
       forcedWaypoints[0],
       endKey,
-      avoidKeys
+      avoidKeys,
     );
 
     if (firstLeg && secondLeg) {
@@ -453,7 +441,7 @@ const buildParkNavigationRoute = (
       PARK_GRAPH_DATA.graph,
       startKey,
       endKey,
-      avoidKeys
+      avoidKeys,
     );
   }
 
@@ -474,7 +462,7 @@ const buildParkNavigationRoute = (
 
 const fetchRoadRoute = async (
   start: RoutePoint,
-  end: RoutePoint
+  end: RoutePoint,
 ): Promise<RoutePoint[]> => {
   const url =
     `https://router.project-osrm.org/route/v1/foot/` +
@@ -484,36 +472,36 @@ const fetchRoadRoute = async (
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error('道路導航服務無法使用');
+    throw new Error("roadServiceUnavailable");
   }
 
   const data = await response.json();
   const coordinates = data?.routes?.[0]?.geometry?.coordinates;
 
   if (!Array.isArray(coordinates)) {
-    throw new Error('找不到道路路線');
+    throw new Error("roadRouteNotFound");
   }
 
   return coordinates.map(
-    ([lng, lat]: [number, number]) => [lat, lng] as RoutePoint
+    ([lng, lat]: [number, number]) => [lat, lng] as RoutePoint,
   );
 };
 
 const generateTimeSlots = (venue: ExtendedVenue) => {
-  const start = venue.openRange?.start ?? '09:00';
-  const end = venue.openRange?.end ?? '17:00';
+  const start = venue.openRange?.start ?? "09:00";
+  const end = venue.openRange?.end ?? "17:00";
   const slotMinutes = venue.slotMinutes ?? 60;
 
   const toMinutes = (value: string) => {
-    const [hours, minutes] = value.split(':').map(Number);
+    const [hours, minutes] = value.split(":").map(Number);
     return hours * 60 + minutes;
   };
 
   const toLabel = (value: number) => {
     const hours = Math.floor(value / 60)
       .toString()
-      .padStart(2, '0');
-    const minutes = (value % 60).toString().padStart(2, '0');
+      .padStart(2, "0");
+    const minutes = (value % 60).toString().padStart(2, "0");
     return `${hours}:${minutes}`;
   };
 
@@ -539,17 +527,16 @@ function FitRouteBounds({ route }: { route: RoutePoint[] }) {
     if (route.length < 2) return;
 
     const bounds = L.latLngBounds(
-      route.map(([lat, lng]) => L.latLng(lat, lng))
+      route.map(([lat, lng]) => L.latLng(lat, lng)),
     );
 
     map.fitBounds(bounds, {
-      padding: [50, 50]
+      padding: [50, 50],
     });
   }, [map, route]);
 
   return null;
 }
-
 
 function MapResizeHandler() {
   const map = useMap();
@@ -567,15 +554,15 @@ function MapResizeHandler() {
     const resizeObserver = new ResizeObserver(refreshMapSize);
     resizeObserver.observe(container);
 
-    window.addEventListener('resize', refreshMapSize);
-    window.addEventListener('orientationchange', refreshMapSize);
+    window.addEventListener("resize", refreshMapSize);
+    window.addEventListener("orientationchange", refreshMapSize);
 
     const delayedRefresh = window.setTimeout(refreshMapSize, 250);
 
     return () => {
       resizeObserver.disconnect();
-      window.removeEventListener('resize', refreshMapSize);
-      window.removeEventListener('orientationchange', refreshMapSize);
+      window.removeEventListener("resize", refreshMapSize);
+      window.removeEventListener("orientationchange", refreshMapSize);
       window.clearTimeout(delayedRefresh);
     };
   }, [map]);
@@ -583,37 +570,178 @@ function MapResizeHandler() {
   return null;
 }
 
-export default function MapPage() {
-  const { t } = useTranslation();
+function MapClickHandler({ onMapClick }: { onMapClick: () => void }) {
+  useMapEvents({
+    click: () => {
+      onMapClick();
+    },
+  });
 
-  const [currentFilter, setCurrentFilter] = useState('all');
-  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
+  return null;
+}
+
+export default function MapPage() {
+  const { t, lang } = useTranslation();
+  const noBusText = t("noBus");
+  const busArrivalText = (minutes: number) =>
+    `${t("busArrivalPrefix")} ${minutes} ${t("busArrivalSuffix")}`;
+
+  const getVenueName = (venue: ExtendedVenue) =>
+    VENUE_NAME_TRANSLATIONS[venue.name]?.[lang] ?? venue.name;
+
+  const getAmenityLabel = (key: string, fallback: string) => {
+  const amenityKey = `amenity_${key}` as Parameters<typeof t>[0];
+
+  return t(amenityKey) || fallback;
+  };
+
+  const [databaseAttractions, setDatabaseAttractions] = useState<
+    ExtendedVenue[]
+  >([]);
+  const [vipItineraryTitles, setVipItineraryTitles] = useState<string[]>([]);
+  const [currentFilter, setCurrentFilter] = useState<VenueFilter>("all");
+  const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [selected, setSelected] = useState<ExtendedVenue | null>(null);
+  const [realtimeBusMinutes, setRealtimeBusMinutes] = useState<number | null>(
+    null,
+  );
   const [weather, setWeather] = useState<{
     temp: number;
     desc: string;
-    tempMax: number;
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [bookingStep, setBookingStep] = useState<
-    'info' | 'select' | 'success'
-  >('info');
+  const [bookingStep, setBookingStep] = useState<"info" | "select" | "success">(
+    "info",
+  );
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [userLocation, setUserLocation] =
-    useState<RoutePoint>(ENTRY_COORDS);
+  const [userLocation, setUserLocation] = useState<RoutePoint>(ENTRY_COORDS);
   const [route, setRoute] = useState<RoutePoint[]>([]);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [isRouting, setIsRouting] = useState(false);
 
-  const venues = VENUE_DATA as ExtendedVenue[];
+  const venues = useMemo(
+    () => [...(VENUE_DATA as ExtendedVenue[]), ...databaseAttractions],
+    [databaseAttractions],
+  );
+  const routeArrows = useMemo(() => {
+    if (route.length < 2) return [];
 
+    const segments: {
+      start: RoutePoint;
+      end: RoutePoint;
+      distance: number;
+      accumulatedStart: number;
+    }[] = [];
+
+    let totalDistance = 0;
+
+    for (let index = 0; index < route.length - 1; index += 1) {
+      const start = route[index];
+      const end = route[index + 1];
+
+      const distance = L.latLng(start[0], start[1]).distanceTo(
+        L.latLng(end[0], end[1]),
+      );
+
+      segments.push({
+        start,
+        end,
+        distance,
+        accumulatedStart: totalDistance,
+      });
+
+      totalDistance += distance;
+    }
+
+    if (totalDistance === 0) return [];
+
+    const footprintSpacing = 90;
+
+    const arrowCount = Math.max(
+      2,
+      Math.min(8, Math.floor(totalDistance / footprintSpacing)),
+    );
+
+    const arrows: {
+      position: RoutePoint;
+      bearing: number;
+    }[] = [];
+
+    for (let arrowIndex = 1; arrowIndex <= arrowCount; arrowIndex += 1) {
+      const targetDistance = (totalDistance * arrowIndex) / (arrowCount + 1);
+
+      const segment = segments.find(
+        (item) =>
+          targetDistance >= item.accumulatedStart &&
+          targetDistance <= item.accumulatedStart + item.distance,
+      );
+
+      if (!segment || segment.distance === 0) continue;
+
+      const progress =
+        (targetDistance - segment.accumulatedStart) / segment.distance;
+
+      const lat =
+        segment.start[0] + (segment.end[0] - segment.start[0]) * progress;
+
+      const lng =
+        segment.start[1] + (segment.end[1] - segment.start[1]) * progress;
+
+      arrows.push({
+        position: [lat, lng],
+        bearing: calculateRouteBearing(segment.start, segment.end),
+      });
+    }
+
+    return arrows;
+  }, [route]);
   const filteredVenues = useMemo(() => {
-    return currentFilter === 'all'
-      ? venues
-      : venues.filter((venue) => venue.type === currentFilter);
-  }, [currentFilter, venues]);
+    if (currentFilter === "all") {
+      return venues;
+    }
 
+    if (currentFilter === "vip") {
+      return venues
+        .filter((venue) =>
+          vipItineraryTitles.some(
+            (title) =>
+              title === venue.name ||
+              title.includes(venue.name) ||
+              venue.name.includes(title),
+          ),
+        )
+        .map((venue) => ({
+          ...venue,
+          type: "vip" as const,
+        }));
+    }
+
+    return venues.filter((venue) => venue.type === currentFilter);
+  }, [currentFilter, venues, vipItineraryTitles]);
+
+  useEffect(() => {
+    try {
+      const storedTitles = localStorage.getItem("vip-itinerary-titles");
+
+      if (!storedTitles) {
+        setVipItineraryTitles([]);
+        return;
+      }
+
+      const parsedTitles = JSON.parse(storedTitles);
+
+      setVipItineraryTitles(
+        Array.isArray(parsedTitles)
+          ? parsedTitles.filter(
+              (title): title is string => typeof title === "string",
+            )
+          : [],
+      );
+    } catch {
+      setVipItineraryTitles([]);
+    }
+  }, []);
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
@@ -624,12 +752,11 @@ export default function MapPage() {
         setWeather({
           temp: Math.round(data.main.temp),
           desc: data.weather[0].description,
-          tempMax: Math.round(data.main.temp_max)
         });
 
         setError(null);
       } catch {
-        setError('無法取得天氣資料');
+        setError(t("weatherError"));
       } finally {
         setIsLoading(false);
       }
@@ -639,14 +766,68 @@ export default function MapPage() {
   }, []);
 
   useEffect(() => {
+    const loadAttractions = async () => {
+      try {
+        const data = await getAttractions();
+
+        const convertedAttractions: ExtendedVenue[] = data
+          .filter((item) => {
+            const distance = L.latLng(
+              PARK_CENTER[0],
+              PARK_CENTER[1],
+            ).distanceTo(L.latLng(item.latitude, item.longitude));
+
+            return distance > PARK_RADIUS;
+          })
+          .map((item): ExtendedVenue => {
+            let icon = "📍";
+
+            if (item.category.includes("餐飲")) {
+              icon = "📌";
+            } else if (
+              item.category.includes("戶外") ||
+              item.category.includes("農場") ||
+              item.category.includes("園區")
+            ) {
+              icon = "🌳";
+            } else if (
+              item.category.includes("室內") ||
+              item.category.includes("文化")
+            ) {
+              icon = "🏛️";
+            }
+
+            return {
+              name: item.place_name,
+              coords: [item.latitude, item.longitude],
+              icon,
+              type: "surround",
+              time: item.category,
+              book: false,
+              tags: [item.category],
+              amenities: [],
+            };
+          });
+
+        setDatabaseAttractions(convertedAttractions);
+
+        console.log("資料庫景點已加入周邊：", convertedAttractions);
+      } catch (attractionError) {
+        console.error("取得資料庫景點失敗：", attractionError);
+
+        setDatabaseAttractions([]);
+      }
+    };
+
+    loadAttractions();
+  }, []);
+
+  useEffect(() => {
     if (!navigator.geolocation) return;
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
-        setUserLocation([
-          position.coords.latitude,
-          position.coords.longitude
-        ]);
+        setUserLocation([position.coords.latitude, position.coords.longitude]);
       },
       () => {
         setUserLocation(ENTRY_COORDS);
@@ -654,8 +835,8 @@ export default function MapPage() {
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 3000
-      }
+        maximumAge: 3000,
+      },
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
@@ -666,17 +847,74 @@ export default function MapPage() {
       ? DAZHONG_NORTH_GO_TIMES
       : DAZHONG_NORTH_RETURN_TIMES
     : null;
+  useEffect(() => {
+    if (!selected?.isBus) {
+      setRealtimeBusMinutes(null);
+      return;
+    }
+
+    const loadRealtimeBus = async () => {
+      try {
+        const apiBase =
+          import.meta.env.VITE_PROXY_API?.replace(/\/$/, "") ?? "";
+
+        const response = await fetch(`${apiBase}/api/bus-times`);
+
+        if (!response.ok) {
+          throw new Error(`公車 API 錯誤：${response.status}`);
+        }
+
+        const data = await response.json();
+
+        const realtimeBus = Array.isArray(data)
+          ? data.find(
+              (item) =>
+                item?.StopName?.Zh_tw?.includes("大眾北路") &&
+                item?.Direction === selected.busDirection &&
+                typeof item?.EstimateTime === "number" &&
+                item.EstimateTime >= 0,
+            )
+          : null;
+
+        if (realtimeBus) {
+          setRealtimeBusMinutes(
+            Math.max(1, Math.ceil(realtimeBus.EstimateTime / 60)),
+          );
+        } else {
+          setRealtimeBusMinutes(null);
+        }
+      } catch (error) {
+        console.error("取得即時公車資料失敗：", error);
+        setRealtimeBusMinutes(null);
+      }
+    };
+
+    loadRealtimeBus();
+  }, [selected]);
 
   const nextBus = selectedTimetable
     ? getNextDeparture(selectedTimetable)
     : null;
 
+  const busDisplayMinutes = realtimeBusMinutes ?? nextBus?.minutesLeft ?? null;
+
   const bookingSlots = selected ? generateTimeSlots(selected) : [];
 
+  /** 開啟景點資訊卡，並清除上一條導航路線。 */
+  const openVenueInfo = (venue: ExtendedVenue) => {
+    setRoute([]);
+    setSelected(venue);
+    setBookingStep("info");
+    setSelectedTime(null);
+    setRouteError(null);
+  };
+
+  /** 關閉景點資訊卡並重設狀態。 */
   const closeInfoCard = () => {
     setSelected(null);
-    setBookingStep('info');
+    setBookingStep("info");
     setSelectedTime(null);
+    setRouteError(null);
   };
 
   const startNavigation = async (venue: ExtendedVenue) => {
@@ -684,12 +922,9 @@ export default function MapPage() {
     setIsRouting(true);
 
     try {
-      const destination: RoutePoint = [
-        venue.coords[0],
-        venue.coords[1]
-      ];
+      const destination: RoutePoint = [venue.coords[0], venue.coords[1]];
 
-      const isParkVenue = venue.type === 'park';
+      const isParkVenue = venue.type === "park";
 
       let nextRoute: RoutePoint[] | null;
 
@@ -699,44 +934,35 @@ export default function MapPage() {
         } else {
           const roadToEntrance = await fetchRoadRoute(
             userLocation,
-            ENTRY_COORDS
+            ENTRY_COORDS,
           );
 
-          const parkRoute = buildParkNavigationRoute(
-            ENTRY_COORDS,
-            venue
-          );
+          const parkRoute = buildParkNavigationRoute(ENTRY_COORDS, venue);
 
           if (!parkRoute?.length) {
-            throw new Error('找不到園區內路線');
+            throw new Error("parkRouteNotFound");
           }
 
-          nextRoute = [
-            ...roadToEntrance,
-            ...parkRoute.slice(1)
-          ];
+          nextRoute = [...roadToEntrance, ...parkRoute.slice(1)];
         }
       } else {
-        nextRoute = await fetchRoadRoute(
-          userLocation,
-          destination
-        );
+        nextRoute = await fetchRoadRoute(userLocation, destination);
       }
 
       if (!nextRoute?.length) {
-        throw new Error('找不到可使用的路線');
+        throw new Error("routeNotFound");
       }
 
       setRoute(nextRoute);
       setSelected(null);
-      setViewMode('map');
+      setViewMode("map");
     } catch (routeFailure) {
       const message =
         routeFailure instanceof Error
           ? routeFailure.message
-          : '路線規劃失敗';
+          : "routePlanningFailed";
 
-      setRouteError(message);
+      setRouteError(t(message as Parameters<typeof t>[0]));
     } finally {
       setIsRouting(false);
     }
@@ -745,32 +971,32 @@ export default function MapPage() {
   return (
     <div
       style={{
-        width: '100%',
-        height: '100%',
+        width: "100%",
+        height: "100%",
         minHeight: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'white',
-        overflow: 'hidden'
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "white",
+        overflow: "hidden",
       }}
     >
       <div
         style={{
-          padding: '10px',
-          borderBottom: '1px solid #eee',
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '10px'
+          padding: "10px",
+          borderBottom: "1px solid #eee",
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "10px",
         }}
       >
         <div
           style={{
-            display: 'flex',
-            gap: '5px',
-            overflowX: 'auto',
-            flex: 1
+            display: "flex",
+            gap: "5px",
+            overflowX: "auto",
+            flex: 1,
           }}
         >
           {FILTER_BUTTONS.map((button) => (
@@ -778,63 +1004,93 @@ export default function MapPage() {
               key={button.id}
               onClick={() => setCurrentFilter(button.id)}
               style={{
-                padding: '6px 12px',
-                borderRadius: '20px',
-                border: 'none',
+                padding: "6px 12px",
+                borderRadius: "20px",
+                border: "none",
                 backgroundColor:
-                  currentFilter === button.id
-                    ? '#fbbf24'
-                    : '#f3f4f6',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer'
+                  currentFilter === button.id ? "#fbbf24" : "#f3f4f6",
+                whiteSpace: "nowrap",
+                cursor: "pointer",
               }}
             >
-              {t(button.id as any)}
+              {t(button.id)}
             </button>
           ))}
         </div>
 
         <span
           style={{
-            fontSize: '14px',
-            fontWeight: 'bold',
-            background: '#f3f4f6',
-            padding: '6px 12px',
-            borderRadius: '20px',
-            whiteSpace: 'nowrap'
+            fontSize: "14px",
+            fontWeight: "bold",
+            background: "#f3f4f6",
+            padding: "6px 12px",
+            borderRadius: "20px",
+            whiteSpace: "nowrap",
           }}
         >
           {weather
-            ? `${getWeatherEmoji(weather.desc)} ${weather.temp}° / ${weather.tempMax}°`
-            : '...'}
+            ? `${getWeatherEmoji(weather.desc)} ${weather.temp}°`
+            : "..."}
         </span>
 
         <button
-          onClick={() => setViewMode('map')}
+          onClick={() => setViewMode("map")}
+          title={t("mapMode")}
+          aria-label={t("mapMode")}
           style={{
-            padding: '5px',
-            background: viewMode === 'map' ? '#eee' : '#fff',
-            cursor: 'pointer',
-            border: 'none',
-            borderRadius: '4px'
+            width: "38px",
+            height: "38px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            border:
+              viewMode === "map"
+                ? "2px solid #f59e0b"
+                : "1px solid transparent",
+            borderRadius: "10px",
+            background: viewMode === "map" ? "#fff7ed" : "#f3f4f6",
+            boxShadow:
+              viewMode === "map"
+                ? "0 0 0 3px rgba(245,158,11,.18), 0 3px 10px rgba(245,158,11,.28)"
+                : "none",
+            fontSize: viewMode === "map" ? "23px" : "19px",
+            transform: viewMode === "map" ? "scale(1.08)" : "scale(1)",
+            transition: "all .2s ease",
+            cursor: "pointer",
           }}
-          aria-label="地圖模式"
         >
-          🗺️
+          📍
         </button>
 
         <button
-          onClick={() => setViewMode('list')}
+          onClick={() => setViewMode("list")}
+          title={t("listMode")}
+          aria-label={t("listMode")}
           style={{
-            padding: '5px',
-            background: viewMode === 'list' ? '#eee' : '#fff',
-            cursor: 'pointer',
-            border: 'none',
-            borderRadius: '4px'
+            width: "38px",
+            height: "38px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 0,
+            border:
+              viewMode === "list"
+                ? "2px solid #f59e0b"
+                : "1px solid transparent",
+            borderRadius: "10px",
+            background: viewMode === "list" ? "#fff7ed" : "#f3f4f6",
+            boxShadow:
+              viewMode === "list"
+                ? "0 0 0 3px rgba(245,158,11,.18), 0 3px 10px rgba(245,158,11,.28)"
+                : "none",
+            fontSize: viewMode === "list" ? "23px" : "19px",
+            transform: viewMode === "list" ? "scale(1.08)" : "scale(1)",
+            transition: "all .2s ease",
+            cursor: "pointer",
           }}
-          aria-label="清單模式"
         >
-          📋
+          📝
         </button>
       </div>
 
@@ -842,22 +1098,29 @@ export default function MapPage() {
         style={{
           flex: 1,
           minHeight: 0,
-          position: 'relative',
-          overflow: 'hidden'
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         {isLoading ? (
-          <div style={{ padding: '20px' }}>資料載入中...</div>
+          <div style={{ padding: "20px" }}>{t("loading")}</div>
         ) : error ? (
-          <div style={{ padding: '20px', color: 'red' }}>{error}</div>
-        ) : viewMode === 'map' ? (
+          <div style={{ padding: "20px", color: "red" }}>{error}</div>
+        ) : viewMode === "map" ? (
           <MapContainer
             center={[24.702, 121.8195]}
             zoom={17}
             zoomControl={false}
-            style={{ height: '100%', width: '100%' }}
+            style={{ height: "100%", width: "100%" }}
           >
             <MapResizeHandler />
+
+            <MapClickHandler
+              onMapClick={() => {
+                setRoute([]);
+                closeInfoCard();
+              }}
+            />
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
             {filteredVenues.map((venue) => (
@@ -865,14 +1128,9 @@ export default function MapPage() {
                 key={`${venue.name}-${venue.coords[0]}-${venue.coords[1]}`}
                 position={venue.coords}
                 icon={getIcon(venue.icon)}
+                zIndexOffset={9000}
                 eventHandlers={{
-                  click: () => {
-                    setRoute([]);
-                    setSelected(venue);
-                    setBookingStep('info');
-                    setSelectedTime(null);
-                    setRouteError(null);
-                  }
+                  click: () => openVenueInfo(venue),
                 }}
               />
             ))}
@@ -880,21 +1138,48 @@ export default function MapPage() {
             <Marker
               position={userLocation}
               icon={userIcon}
-              zIndexOffset={10000}
+              zIndexOffset={30000}
             />
 
             {route.length > 1 && (
               <>
+                {/* 白色底線，避免路徑被地圖背景吃掉 */}
                 <Polyline
                   positions={route as LatLngExpression[]}
                   pathOptions={{
-                    color: '#ef4444',
-                    weight: 6,
-                    opacity: 0.95,
-                    lineCap: 'round',
-                    lineJoin: 'round'
+                    color: "#ffffff",
+                    weight: 7,
+                    opacity: 0.2,
+                    lineCap: "round",
+                    lineJoin: "round",
                   }}
                 />
+
+                {/* 藍色虛線導航路徑 */}
+                <Polyline
+                  positions={route as LatLngExpression[]}
+                  pathOptions={{
+                    color: "#3b82f6",
+                    weight: 4,
+                    opacity: 0.5,
+                    dashArray: "10 10",
+                    lineCap: "round",
+                    lineJoin: "round",
+                  }}
+                />
+
+                {/* 沿途方向箭頭 */}
+                {routeArrows.map((arrow, index) => (
+                  <Marker
+                    key={`route-arrow-${index}`}
+                    position={arrow.position}
+                    icon={getRouteFootprintIcon(arrow.bearing)}
+                    interactive={false}
+                    keyboard={false}
+                    zIndexOffset={9000}
+                  />
+                ))}
+
                 <FitRouteBounds route={route} />
               </>
             )}
@@ -902,28 +1187,22 @@ export default function MapPage() {
         ) : (
           <div
             style={{
-              padding: '10px',
-              height: '100%',
-              overflowY: 'auto'
+              padding: "10px",
+              height: "100%",
+              overflowY: "auto",
             }}
           >
             {filteredVenues.map((venue) => (
               <div
                 key={`${venue.name}-${venue.coords[0]}-${venue.coords[1]}`}
-                onClick={() => {
-                  setRoute([]);
-                  setSelected(venue);
-                  setBookingStep('info');
-                  setSelectedTime(null);
-                  setRouteError(null);
-                }}
+                onClick={() => openVenueInfo(venue)}
                 style={{
-                  padding: '15px',
-                  borderBottom: '1px solid #eee',
-                  cursor: 'pointer'
+                  padding: "15px",
+                  borderBottom: "1px solid #eee",
+                  cursor: "pointer",
                 }}
               >
-                {venue.icon} {venue.name}
+                {venue.icon} {getVenueName(venue)}
               </div>
             ))}
           </div>
@@ -932,35 +1211,35 @@ export default function MapPage() {
         {selected && (
           <div
             style={{
-              position: 'absolute',
-              bottom: '16px',
-              left: '16px',
-              right: '16px',
+              position: "absolute",
+              bottom: "16px",
+              left: "16px",
+              right: "16px",
               zIndex: 9999,
-              background: 'rgba(255,255,255,.94)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              padding: '22px 18px',
-              borderRadius: '28px',
-              boxShadow: '0 8px 24px rgba(0,0,0,.16)'
+              background: "rgba(255,255,255,.94)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              padding: "22px 18px",
+              borderRadius: "28px",
+              boxShadow: "0 8px 24px rgba(0,0,0,.16)",
             }}
           >
             <button
               onClick={closeInfoCard}
-              aria-label="關閉資訊框"
+              aria-label={t("close")}
               style={{
-                position: 'absolute',
-                top: '14px',
-                right: '16px',
-                width: '30px',
-                height: '30px',
-                border: 'none',
-                borderRadius: '50%',
-                background: '#f3f4f6',
-                color: '#6b7280',
-                cursor: 'pointer',
-                fontSize: '18px',
-                lineHeight: 1
+                position: "absolute",
+                top: "14px",
+                right: "16px",
+                width: "30px",
+                height: "30px",
+                border: "none",
+                borderRadius: "50%",
+                background: "#f3f4f6",
+                color: "#6b7280",
+                cursor: "pointer",
+                fontSize: "18px",
+                lineHeight: 1,
               }}
             >
               ×
@@ -970,49 +1249,35 @@ export default function MapPage() {
               <div>
                 <div
                   style={{
-                    fontSize: '12px',
-                    color: '#64748b',
-                    marginBottom: '4px'
+                    fontSize: "12px",
+                    color: "#64748b",
+                    marginBottom: "4px",
                   }}
                 >
-                  公車資訊
+                  {t("busInfo")}
                 </div>
 
                 <h3
                   style={{
                     margin: 0,
-                    marginBottom: '10px',
-                    fontSize: '20px',
-                    fontWeight: 800
+                    marginBottom: "10px",
+                    fontSize: "20px",
+                    fontWeight: 800,
                   }}
                 >
-                  {selected.icon} {selected.name}
+                  {selected.icon} {getVenueName(selected)}
                 </h3>
 
                 <div
                   style={{
-                    marginBottom: '14px',
-                    lineHeight: 1.7
+                    marginBottom: "14px",
+                    lineHeight: 1.7,
                   }}
                 >
-                  {nextBus ? (
-                    <>
-                      <div>
-                        🚌 下一班 {nextBus.time}，約{' '}
-                        {nextBus.minutesLeft} 分鐘後
-                      </div>
-                      <div
-                        style={{
-                          fontSize: '13px',
-                          color: '#6b7280',
-                          marginTop: '4px'
-                        }}
-                      >
-                        今日班次：{selectedTimetable?.join('、')}
-                      </div>
-                    </>
+                  {busDisplayMinutes !== null ? (
+                    <div>{busArrivalText(busDisplayMinutes)}</div>
                   ) : (
-                    <div>今日末班車已駛離</div>
+                    <div>{noBusText}</div>
                   )}
                 </div>
 
@@ -1020,50 +1285,64 @@ export default function MapPage() {
                   onClick={() => startNavigation(selected)}
                   disabled={isRouting}
                   style={{
-                    padding: '7px 16px',
-                    border: 'none',
-                    borderRadius: '999px',
-                    background: '#2563eb',
-                    color: 'white',
+                    padding: "7px 16px",
+                    border: "none",
+                    borderRadius: "999px",
+                    background: "#2563eb",
+                    color: "white",
                     fontWeight: 700,
-                    cursor: isRouting ? 'wait' : 'pointer'
+                    cursor: isRouting ? "wait" : "pointer",
                   }}
                 >
-                  {isRouting ? '規劃中…' : '前往'}
+                  {isRouting ? t("planning") : t("nav")}
                 </button>
               </div>
             ) : (
               <>
-                {bookingStep === 'info' && (
+                {bookingStep === "info" && (
                   <div>
                     <div
                       style={{
-                        fontSize: '12px',
-                        color: '#64748b',
-                        marginBottom: '4px'
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                        marginBottom: "10px",
+                        paddingRight: "42px",
                       }}
                     >
-                      {selected.time}
-                    </div>
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: "20px",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {getVenueName(selected)}
+                      </h3>
 
-                    <h3
-                      style={{
-                        margin: 0,
-                        marginBottom: '10px',
-                        fontSize: '20px',
-                        fontWeight: 800
-                      }}
-                    >
-                      {selected.name}
-                    </h3>
+                      {selected.time && (
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            color: "#64748b",
+                            background: "#f1f5f9",
+                            padding: "4px 8px",
+                            borderRadius: "999px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {selected.time}
+                        </span>
+                      )}
+                    </div>
 
                     {(selected.amenities?.length ?? 0) > 0 && (
                       <div
                         style={{
-                          display: 'flex',
-                          flexWrap: 'wrap',
-                          gap: '6px',
-                          marginBottom: '10px'
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                          marginBottom: "10px",
                         }}
                       >
                         {selected.amenities?.map((key) => {
@@ -1073,16 +1352,16 @@ export default function MapPage() {
                           return (
                             <span
                               key={key}
-                              title={amenity.label}
+                              title={getAmenityLabel(key, amenity.label)}
                               style={{
-                                width: '32px',
-                                height: '32px',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                borderRadius: '8px',
-                                background: '#f1f5f9',
-                                fontSize: '20px'
+                                width: "32px",
+                                height: "32px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                borderRadius: "8px",
+                                background: "#f1f5f9",
+                                fontSize: "20px",
                               }}
                             >
                               {amenity.icon}
@@ -1093,23 +1372,25 @@ export default function MapPage() {
                     )}
 
                     {selected.note && (
-                      <div
-                        style={{
-                          fontSize: '13px',
-                          color: '#6b7280',
-                          marginBottom: '12px'
-                        }}
-                      >
-                        {selected.note}
-                      </div>
-                    )}
+                    <div
+                      style={{
+                        fontSize: '13px',
+                        color: '#6b7280',
+                        marginBottom: '12px'
+                      }}
+                    >
+                      {selected.note === '牧草購買處'
+                        ? t('noteGrassPurchase')
+                        : selected.note}
+                    </div>
+                  )}
 
                     {routeError && (
                       <div
                         style={{
-                          fontSize: '13px',
-                          color: '#dc2626',
-                          marginBottom: '10px'
+                          fontSize: "13px",
+                          color: "#dc2626",
+                          marginBottom: "10px",
                         }}
                       >
                         {routeError}
@@ -1118,26 +1399,26 @@ export default function MapPage() {
 
                     <div
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        flexWrap: 'wrap'
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        flexWrap: "wrap",
                       }}
                     >
                       {selected.book && (
                         <button
-                          onClick={() => setBookingStep('select')}
+                          onClick={() => setBookingStep("select")}
                           style={{
-                            padding: '7px 16px',
-                            border: 'none',
-                            borderRadius: '999px',
-                            background: '#dcfce7',
-                            color: '#166534',
+                            padding: "7px 16px",
+                            border: "none",
+                            borderRadius: "999px",
+                            background: "#dcfce7",
+                            color: "#166534",
                             fontWeight: 700,
-                            cursor: 'pointer'
+                            cursor: "pointer",
                           }}
                         >
-                          預約
+                          {t("book")}
                         </button>
                       )}
 
@@ -1145,50 +1426,50 @@ export default function MapPage() {
                         onClick={() => startNavigation(selected)}
                         disabled={isRouting}
                         style={{
-                          padding: '7px 16px',
-                          border: 'none',
-                          borderRadius: '999px',
-                          background: '#2563eb',
-                          color: 'white',
+                          padding: "7px 16px",
+                          border: "none",
+                          borderRadius: "999px",
+                          background: "#2563eb",
+                          color: "white",
                           fontWeight: 700,
-                          cursor: isRouting ? 'wait' : 'pointer'
+                          cursor: isRouting ? "wait" : "pointer",
                         }}
                       >
-                        {isRouting ? '規劃中…' : '前往'}
+                        {isRouting ? t("planning") : t("nav")}
                       </button>
                     </div>
                   </div>
                 )}
 
-                {bookingStep === 'select' && (
+                {bookingStep === "select" && (
                   <div>
                     <h3
                       style={{
                         margin: 0,
-                        marginBottom: '4px',
-                        fontSize: '20px',
-                        fontWeight: 800
+                        marginBottom: "4px",
+                        fontSize: "20px",
+                        fontWeight: 800,
                       }}
                     >
-                      {selected.name} 預約
+                      {getVenueName(selected)} {t("bookingTitle")}
                     </h3>
 
                     <div
                       style={{
-                        fontSize: '12px',
-                        color: '#64748b',
-                        marginBottom: '12px'
+                        fontSize: "12px",
+                        color: "#64748b",
+                        marginBottom: "12px",
                       }}
                     >
-                      請選擇時間
+                      {t("selectTime")}
                     </div>
 
                     <div
                       style={{
-                        display: 'flex',
-                        flexWrap: 'wrap',
-                        gap: '8px',
-                        marginBottom: '12px'
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        marginBottom: "12px",
                       }}
                     >
                       {bookingSlots.map((time) => (
@@ -1196,21 +1477,16 @@ export default function MapPage() {
                           key={time}
                           onClick={() => setSelectedTime(time)}
                           style={{
-                            padding: '9px 14px',
+                            padding: "9px 14px",
                             border:
                               selectedTime === time
-                                ? '1px solid #2563eb'
-                                : '1px solid #d1d5db',
-                            borderRadius: '10px',
+                                ? "1px solid #2563eb"
+                                : "1px solid #d1d5db",
+                            borderRadius: "10px",
                             background:
-                              selectedTime === time
-                                ? '#2563eb'
-                                : '#fff',
-                            color:
-                              selectedTime === time
-                                ? '#fff'
-                                : '#111827',
-                            cursor: 'pointer'
+                              selectedTime === time ? "#2563eb" : "#fff",
+                            color: selectedTime === time ? "#fff" : "#111827",
+                            cursor: "pointer",
                           }}
                         >
                           {time}
@@ -1220,83 +1496,80 @@ export default function MapPage() {
 
                     <div
                       style={{
-                        display: 'flex',
-                        gap: '8px'
+                        display: "flex",
+                        gap: "8px",
                       }}
                     >
                       <button
-                        onClick={() => setBookingStep('info')}
+                        onClick={() => setBookingStep("info")}
                         style={{
                           flex: 1,
-                          padding: '10px',
-                          border: 'none',
-                          borderRadius: '10px',
-                          background: '#f3f4f6',
-                          cursor: 'pointer'
+                          padding: "10px",
+                          border: "none",
+                          borderRadius: "10px",
+                          background: "#f3f4f6",
+                          cursor: "pointer",
                         }}
                       >
-                        返回
+                        {t("back")}
                       </button>
 
                       <button
                         onClick={() => {
                           if (!selectedTime) return;
-                          setBookingStep('success');
+                          setBookingStep("success");
                         }}
                         disabled={!selectedTime}
                         style={{
                           flex: 1,
-                          padding: '10px',
-                          border: 'none',
-                          borderRadius: '10px',
-                          background: selectedTime
-                            ? '#f59e0b'
-                            : '#e5e7eb',
-                          color: selectedTime ? '#fff' : '#9ca3af',
-                          cursor: selectedTime
-                            ? 'pointer'
-                            : 'not-allowed',
-                          fontWeight: 700
+                          padding: "10px",
+                          border: "none",
+                          borderRadius: "10px",
+                          background: selectedTime ? "#f59e0b" : "#e5e7eb",
+                          color: selectedTime ? "#fff" : "#9ca3af",
+                          cursor: selectedTime ? "pointer" : "not-allowed",
+                          fontWeight: 700,
                         }}
                       >
-                        預約送出
+                        {t("submitBooking")}
                       </button>
                     </div>
                   </div>
                 )}
 
-                {bookingStep === 'success' && (
+                {bookingStep === "success" && (
                   <div>
                     <h3
                       style={{
                         margin: 0,
-                        marginBottom: '10px',
-                        fontSize: '20px',
-                        fontWeight: 800
+                        marginBottom: "10px",
+                        fontSize: "20px",
+                        fontWeight: 800,
                       }}
                     >
-                      預約成功
+                      {t("bookingSuccess")}
                     </h3>
 
-                    <p style={{ marginBottom: '12px' }}>
-                      已為您預約「{selected.name}」的{' '}
-                      {selectedTime} 時段。
+                    <p style={{ marginBottom: "12px" }}>
+                      {t("bookingSuccessPrefix")}「{getVenueName(selected)}」
+                      {t("bookingSuccessMiddle")} {selectedTime}{" "}
+                      {t("bookingSuccessSuffix")}
                     </p>
 
                     <button
                       onClick={closeInfoCard}
                       style={{
-                        width: '100%',
-                        padding: '10px',
-                        border: 'none',
-                        borderRadius: '10px',
-                        background: '#2563eb',
-                        color: 'white',
-                        cursor: 'pointer',
-                        fontWeight: 700
+                        width: "100%",
+                        padding: "10px",
+                        border: "none",
+                        borderRadius: "10px",
+                        background: "#2563eb",
+                        color: "white",
+                        cursor: "pointer",
+                        fontWeight: 700,
                       }}
                     >
-                      確定
+                      {t("confirm")}
                     </button>
                   </div>
                 )}
