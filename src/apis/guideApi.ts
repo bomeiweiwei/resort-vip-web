@@ -20,7 +20,8 @@ export type GuideResponse = {
   guideMessage: string; 
   audioUrl?: string;   
   imageUrl?: string;   // 後端 Python 傳回的景點圖片 URL (可為相對路徑或絕對路徑)
-  user_text?: string;  
+  user_text?: string;
+  responseLanguage?: string;  // 後端回傳的語言代碼 (ex: zh-TW, en-US, ja-JP)  
 };
 
 export type AnalyzeInputParams = {
@@ -90,7 +91,30 @@ export const analyzeGuideInput = async (params: AnalyzeInputParams): Promise<Gui
 
   // 🎤 語音錄音檔案
   if (params.voice) {
-    formData.append("voice", params.voice, "voice.wav");
+  const mimeType = params.voice.type || "audio/webm";
+
+  let extension = "webm";
+
+  if (mimeType.includes("wav")) {
+    extension = "wav";
+  } else if (mimeType.includes("ogg")) {
+    extension = "ogg";
+  } else if (mimeType.includes("mp4") || mimeType.includes("m4a")) {
+    extension = "m4a";
+  } else if (mimeType.includes("mpeg") || mimeType.includes("mp3")) {
+    extension = "mp3";
+  } else if (mimeType.includes("webm")) {
+    extension = "webm";
+  }
+
+  const voiceFile =
+    params.voice instanceof File
+      ? params.voice
+      : new File([params.voice], `voice.${extension}`, {
+          type: mimeType,
+        });
+
+  formData.append("voice", voiceFile);
   }
 
   // 🗺️ 當前對話景點上下文 (後續問答追問時使用)
@@ -115,5 +139,32 @@ export const analyzeGuideInput = async (params: AnalyzeInputParams): Promise<Gui
       },
     }
   );
+  return response.data;
+};
+
+export type GuideTextToSpeechParams = {
+  text: string;
+  language: string;
+};
+
+/**
+ * 專屬導遊 TTS API
+ * 後端直接回傳 audio/mpeg bytes，前端轉成 Blob 播放。
+ * 不儲存音檔。
+ */
+export const synthesizeGuideSpeech = async (
+  params: GuideTextToSpeechParams
+): Promise<Blob> => {
+  const response = await apiClient.post(
+    "/api/guide/text-to-speech",
+    {
+      text: params.text,
+      language: params.language,
+    },
+    {
+      responseType: "blob",
+    }
+  );
+
   return response.data;
 };

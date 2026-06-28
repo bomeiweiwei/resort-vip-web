@@ -16,6 +16,15 @@ const translations = {
   voiceError: { zh: "無法存取麥克風設備，請確認權限。", en: "Unable to access microphone. Please check permissions." }
 };
 
+const getSupportedAudioMimeType = (): string => {
+  if (!window.MediaRecorder) return "";
+  if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
+  if (MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
+  if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) return "audio/ogg;codecs=opus";
+  if (MediaRecorder.isTypeSupported("audio/mp4")) return "audio/mp4";
+  return "";
+};
+
 export default function GuidePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -82,7 +91,10 @@ export default function GuidePage() {
       // 開始錄音
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
+        const mimeType = getSupportedAudioMimeType();
+        const mediaRecorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
         
@@ -91,8 +103,9 @@ export default function GuidePage() {
         };
         
         mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
-          // 帶著語音 Blob，轉場前往 Loading 中介頁面
+          const audioType = mediaRecorder.mimeType || mimeType || "audio/webm";
+          const audioBlob = new Blob(audioChunksRef.current, { type: audioType });
+          // 帶著真實格式的語音 Blob，轉場前往 Loading 中介頁面；不要假裝成 audio/wav。
           navigate("/guide/loading", { state: { voiceBlob: audioBlob } });
         };
 

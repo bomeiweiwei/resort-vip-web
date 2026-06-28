@@ -2,13 +2,57 @@ import { useState, useEffect, useRef } from "react";
 import { MapPin, Mic, Pause, Play, Send, Square, AlertCircle } from "lucide-react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 // 🎯 匯入統一管理的 API 函數 (指向相對路徑 src/apis/guideApi.ts)
-import { analyzeGuideInput } from "../apis/guideApi"; 
+import { analyzeGuideInput, synthesizeGuideSpeech  } from "../apis/guideApi"; 
 import "../styles/guide.css";
 
 type ChatMessage = {
   id: number;
   role: "assistant" | "user";
   text: string;
+};
+
+type GuideAnalysisResult = {
+  success?: boolean;
+  title?: string;
+  location?: string;
+  guideMessage: string;
+  audioUrl?: string;
+  imageUrl?: string;
+  user_text?: string;
+  responseLanguage?: string;
+};
+
+const normalizeGuideLanguage = (language?: string): string => {
+  const value = (language || "").toLowerCase();
+
+  if (value.startsWith("en")) return "en-US";
+  if (value.startsWith("ja")) return "ja-JP";
+  if (value.startsWith("ko")) return "ko-KR";
+  if (value.startsWith("zh")) return "zh-TW";
+
+  return "zh-TW";
+};
+
+const detectLanguageFromText = (text?: string, fallback = "zh-TW"): string => {
+  const value = (text || "").trim();
+
+  if (!value) return normalizeGuideLanguage(fallback);
+  if (/[\u3040-\u30ff]/.test(value)) return "ja-JP";
+  if (/[\uac00-\ud7af]/.test(value)) return "ko-KR";
+  if (/[\u4e00-\u9fff]/.test(value)) return "zh-TW";
+  if (/[A-Za-z]/.test(value)) return "en-US";
+
+  return normalizeGuideLanguage(fallback);
+};
+
+
+const getSupportedAudioMimeType = (): string => {
+  if (!window.MediaRecorder) return "";
+  if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return "audio/webm;codecs=opus";
+  if (MediaRecorder.isTypeSupported("audio/webm")) return "audio/webm";
+  if (MediaRecorder.isTypeSupported("audio/ogg;codecs=opus")) return "audio/ogg;codecs=opus";
+  if (MediaRecorder.isTypeSupported("audio/mp4")) return "audio/mp4";
+  return "";
 };
 
 const translations = {
@@ -22,11 +66,39 @@ const translations = {
 /**
  * 🎯 景點圖片解析器 (優先採用後端 Python 回傳之圖片路徑，若無則精準 fallback)
  */
+const toGuideImageUrl = (backendImageUrl?: string): string => {
+  const imageUrl = (backendImageUrl || "").trim();
+
+  if (!imageUrl) return "";
+
+  // 後端若回傳完整網址或 data URL，直接使用。
+  if (
+    imageUrl.startsWith("http://") ||
+    imageUrl.startsWith("https://") ||
+    imageUrl.startsWith("data:")
+  ) {
+    return imageUrl;
+  }
+
+  // 後端若已經回傳 /api/guide/images/...，不要再補一次 /api。
+  if (imageUrl.startsWith("/api/")) {
+    return imageUrl;
+  }
+
+  // 後端若回傳 /guide/images/...，前端才補上 /api。
+  if (imageUrl.startsWith("/")) {
+    return `/api${imageUrl}`;
+  }
+
+  // 後端若回傳 guide/images/...，補成 /api/guide/images/...
+  return `/api/${imageUrl}`;
+};
+
 const getAttractionImage = (title: string, backendImageUrl?: string): string => {
-  if (backendImageUrl) {
-    return backendImageUrl.startsWith("http") || backendImageUrl.startsWith("data:")
-      ? backendImageUrl
-      : `/api${backendImageUrl}`; // 相對路徑自動補上 API 前綴
+  const normalizedBackendImageUrl = toGuideImageUrl(backendImageUrl);
+
+  if (normalizedBackendImageUrl) {
+    return normalizedBackendImageUrl;
   }
 
   const lowerTitle = (title || "").toLowerCase();
@@ -49,7 +121,7 @@ export default function GuideResultPage() {
   const context = useOutletContext<any>();
   const currentLang = (context && typeof context === "object" && context.currentLang === "en") ? "en" : "zh";
 
-  const backendResult = location.state?.analysisResult;
+  const backendResult = location.state?.analysisResult as GuideAnalysisResult | undefined;
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -61,6 +133,13 @@ export default function GuideResultPage() {
 
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
   const chatAudioRef = useRef<HTMLAudioElement | null>(null);
+  const mainAudioObjectUrlRef = useRef<string | null>(null);
+  const chatAudioObjectUrlRef = useRef<string | null>(null);
+
+  // 避免 React 18 StrictMode 在開發環境重複觸發 TTS，造成兩段語音同時播放。
+  const mainTtsKeyRef = useRef<string | null>(null);
+  const mainTtsPromiseRef = useRef<Promise<Blob> | null>(null);
+  const mainTtsRequestIdRef = useRef(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   
@@ -88,27 +167,92 @@ export default function GuideResultPage() {
     }
 
     setMessages([{ id: 1, role: "assistant", text: backendResult.guideMessage }]);
-    
-    if (backendResult.audioUrl) {
-      const fullUrl = backendResult.audioUrl.startsWith("http") ? backendResult.audioUrl : `/api${backendResult.audioUrl}`;
-      const audio = new Audio(fullUrl);
-      audio.playbackRate = 1.25;
-      mainAudioRef.current = audio;
 
-      audio.onplay = () => setIsPlaying(true);
-      audio.onpause = () => setIsPlaying(false);
-      audio.onended = () => setIsPlaying(false);
+    const speechLanguage = backendResult.responseLanguage
+      ? normalizeGuideLanguage(backendResult.responseLanguage)
+      : detectLanguageFromText(
+          backendResult.guideMessage,
+          currentLang === "en" ? "en-US" : "zh-TW"
+        );
 
-      audio.play()
-        .then(() => setIsPlaying(true))
-        .catch((e) => console.log(translations.ttsBlock[currentLang], e));
-    }
+    const ttsKey = `${backendResult.guideMessage}::${speechLanguage}`;
+    let isCancelled = false;
+    const requestId = ++mainTtsRequestIdRef.current;
+
+    const releaseMainAudio = () => {
+      if (mainAudioRef.current) {
+        mainAudioRef.current.pause();
+        mainAudioRef.current.onplay = null;
+        mainAudioRef.current.onpause = null;
+        mainAudioRef.current.onended = null;
+        mainAudioRef.current.src = "";
+        mainAudioRef.current = null;
+      }
+
+      if (mainAudioObjectUrlRef.current) {
+        URL.revokeObjectURL(mainAudioObjectUrlRef.current);
+        mainAudioObjectUrlRef.current = null;
+      }
+
+      setIsPlaying(false);
+    };
+
+    const prepareGuideSpeech = async () => {
+      try {
+        if (!backendResult.guideMessage) return;
+
+        // 同一段導覽文字 + 同一語系，只建立一個 TTS 請求。
+        // React 18 StrictMode 在 dev 會讓 useEffect 跑兩次，這裡可以避免產生兩個 audio。
+        if (mainTtsKeyRef.current !== ttsKey || !mainTtsPromiseRef.current) {
+          releaseMainAudio();
+          mainTtsKeyRef.current = ttsKey;
+          mainTtsPromiseRef.current = synthesizeGuideSpeech({
+            text: backendResult.guideMessage,
+            language: speechLanguage,
+          });
+        }
+
+        const audioBlob = await mainTtsPromiseRef.current;
+
+        // 如果這次 effect 已經被清理，或有更新的 TTS 請求，就不要建立 audio。
+        if (isCancelled || requestId !== mainTtsRequestIdRef.current) return;
+
+        releaseMainAudio();
+
+        const audioObjectUrl = URL.createObjectURL(audioBlob);
+        mainAudioObjectUrlRef.current = audioObjectUrl;
+
+        const audio = new Audio(audioObjectUrl);
+        audio.playbackRate = 1.15;
+        mainAudioRef.current = audio;
+
+        audio.onplay = () => setIsPlaying(true);
+        audio.onpause = () => setIsPlaying(false);
+        audio.onended = () => setIsPlaying(false);
+
+        // 不自動播放。只準備語音，讓使用者按紅色區域的播放按鈕。
+        // 這樣可以避免 StrictMode 或瀏覽器自動播放造成「多一段不能暫停的語音」。
+        setIsPlaying(false);
+      } catch (error) {
+        if (isCancelled) return;
+        console.error("Guide TTS failed:", error);
+        setErrorToast("語音導覽產生失敗，請稍後再試。");
+      }
+    };
+
+    prepareGuideSpeech();
 
     return () => {
+      isCancelled = true;
       mainAudioRef.current?.pause();
       chatAudioRef.current?.pause();
+
+      if (chatAudioObjectUrlRef.current) {
+        URL.revokeObjectURL(chatAudioObjectUrlRef.current);
+        chatAudioObjectUrlRef.current = null;
+      }
     };
-  }, [backendResult, navigate]);
+  }, [backendResult, navigate, currentLang]);
 
   // 智慧滾動對策：Web 滾動內層，Mobile 滾動視窗
   useEffect(() => {
@@ -119,27 +263,58 @@ export default function GuideResultPage() {
     }
   }, [messages]);
 
-  const playChatAudio = (url: string) => {
-    chatAudioRef.current?.pause();
-    if (mainAudioRef.current && !mainAudioRef.current.paused) {
-      mainAudioRef.current.pause(); 
-    }
-    const fullUrl = url.startsWith("http") ? url : `/api${url}`;
-    const nextAudio = new Audio(fullUrl);
-    nextAudio.playbackRate = 1.25;
-    chatAudioRef.current = nextAudio;
-    nextAudio.play().catch((e) => console.log("Chat audio play failed:", e));
-  };
+  const playChatSpeech = async (text: string, language?: string) => {
+    if (!text.trim()) return;
 
-  const togglePlay = () => {
-    if (!mainAudioRef.current) return;
-    if (isPlaying) {
-      mainAudioRef.current.pause();
-    } else {
+    try {
       chatAudioRef.current?.pause();
-      mainAudioRef.current.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+
+      if (mainAudioRef.current && !mainAudioRef.current.paused) {
+        mainAudioRef.current.pause();
+      }
+
+      if (chatAudioObjectUrlRef.current) {
+        URL.revokeObjectURL(chatAudioObjectUrlRef.current);
+        chatAudioObjectUrlRef.current = null;
+      }
+
+      const audioBlob = await synthesizeGuideSpeech({
+        text,
+        language: language
+          ? normalizeGuideLanguage(language)
+          : detectLanguageFromText(text, currentLang === "en" ? "en-US" : "zh-TW"),
+      });
+
+      const audioObjectUrl = URL.createObjectURL(audioBlob);
+      chatAudioObjectUrlRef.current = audioObjectUrl;
+
+      const nextAudio = new Audio(audioObjectUrl);
+      nextAudio.playbackRate = 1.15;
+      chatAudioRef.current = nextAudio;
+
+      nextAudio.play().catch((e) => console.log("Chat audio play failed:", e));
+    } catch (error) {
+      console.error("Guide chat TTS failed:", error);
+      setErrorToast("語音導覽產生失敗，請稍後再試。");
     }
   };
+// 🎯 播放 / 暫停導遊 TTS 語音
+  const togglePlay = () => {
+  if (!mainAudioRef.current) {
+    setErrorToast("語音導覽尚未準備完成，請稍候再試。");
+    return;
+  }
+
+  if (isPlaying) {
+    mainAudioRef.current.pause();
+  } else {
+    chatAudioRef.current?.pause();
+    mainAudioRef.current
+      .play()
+      .then(() => setIsPlaying(true))
+      .catch(() => setIsPlaying(false));
+  }
+};
 
   // 文字追問
   const handleSend = async () => {
@@ -158,7 +333,7 @@ export default function GuideResultPage() {
         history: JSON.stringify(currentHistory) // 將包含最新訊息的歷史對話轉 JSON 發送
       });
       setMessages((prev) => [...prev, { id: Date.now() + 1, role: "assistant", text: data.guideMessage }]);
-      if (data.audioUrl) playChatAudio(data.audioUrl);
+      await playChatSpeech(data.guideMessage, (data as any).responseLanguage || detectLanguageFromText(text, currentLang === "en" ? "en-US" : "zh-TW"));
     } catch (err: any) {
       console.error("Send message error:", err);
       const backendErrorMsg = err.response?.data?.detail;
@@ -182,13 +357,17 @@ export default function GuideResultPage() {
 
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mediaRecorder = new MediaRecorder(stream);
+        const mimeType = getSupportedAudioMimeType();
+        const mediaRecorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
         mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
         
         mediaRecorder.onstop = async () => {
-          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+          const audioType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
+          const audioBlob = new Blob(audioChunksRef.current, { type: audioType });
           const userMsgId = Date.now();
           const userVoicePlaceholder: ChatMessage = { id: userMsgId, role: "user", text: translations.voiceSending[currentLang] };
           
@@ -207,7 +386,10 @@ export default function GuideResultPage() {
               prev.map(msg => msg.id === userMsgId ? { ...msg, text: `🎤 ${data.user_text || "..."}` } : msg)
               .concat({ id: Date.now() + 1, role: "assistant", text: data.guideMessage })
             );
-            if (data.audioUrl) playChatAudio(data.audioUrl);
+            await playChatSpeech(
+              data.guideMessage,
+              (data as any).responseLanguage || detectLanguageFromText(data.user_text || "", currentLang === "en" ? "en-US" : "zh-TW")
+            );
           } catch (err: any) {
             console.error(err);
             const backendErrorMsg = err.response?.data?.detail;
