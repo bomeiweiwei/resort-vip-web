@@ -1,0 +1,577 @@
+/* ==========================================================================
+   AI 專屬語音導遊 - 全域變數與底色設定
+   ========================================================================== */
+:root {
+  --primary-gold: #f59e0b;
+  --primary-gold-hover: #d97706;
+  --dark-slate: #0f172a;
+  --medium-slate: #1e293b;
+  --light-slate: #f8fafc;
+  --text-main: #334155;
+  --text-muted: #64748b;
+  --border-color: #e2e8f0;
+  --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 25px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+/* 🎯 當主版面容器 .page-content 內渲染導遊頁面時，強制沒收外層 Padding 與滾動，由子組件自行填滿並自適應 */
+.page-content:has(.guide-page),
+.page-content:has(.guide-loading-page){
+  overflow: hidden !important;
+  padding: 0 !important;
+  height: calc(100vh - 86px - 48px) !important;
+}
+
+@media (max-width: 768px) {
+  .page-content:has(.guide-page),
+  .page-content:has(.guide-loading-page) {
+    height: calc(100dvh - 64px - 76px) !important; /* 扣除 Header (64px) 與 Tabbar (76px) */
+    overflow: hidden !important;
+    padding: 0 !important;
+  }
+}
+
+/* ==========================================================================
+   1. 導遊首頁 (GuidePage)
+   ========================================================================== */
+.guide-page {
+  padding: 24px 16px calc(120px + env(safe-area-inset-bottom, 24px)) 16px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  min-height: calc(100vh - 120px); 
+  background-color: var(--light-slate);
+  box-sizing: border-box;
+}
+
+.guide-hero {
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+/* 膠囊/相機大圓圈：漸層外圈、陰影與脈衝 Hover */
+.guide-camera-circle {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+  border: 4px solid #ffffff;
+  box-shadow: var(--shadow-md), inset 0 2px 8px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.guide-camera-circle::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px dashed var(--primary-gold);
+  opacity: 0.4;
+  transform: scale(1.08);
+  transition: transform 0.3s ease;
+}
+
+.guide-camera-circle:hover {
+  transform: translateY(-4px) scale(1.02);
+  color: var(--primary-gold);
+  box-shadow: var(--shadow-lg);
+}
+
+.guide-camera-circle:hover::after {
+  transform: scale(1.15) rotate(45deg);
+  opacity: 0.8;
+}
+
+.guide-camera-circle:active {
+  transform: scale(0.96);
+}
+
+.guide-hero h1 {
+  margin: 0 0 12px;
+  color: var(--dark-slate);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.guide-hero p {
+  margin: 0 0 32px;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 360px;
+}
+
+/* 上傳/拍攝按鈕 */
+.guide-upload-button {
+  border: none;
+  border-radius: 999px;
+  background: var(--dark-slate);
+  color: #ffffff;
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+  transition: all 0.2s ease;
+}
+
+.guide-upload-button:hover {
+  background: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.22);
+}
+
+.guide-upload-button:active {
+  transform: translateY(1px) scale(0.96);
+}
+
+/* 預設狀態首頁下方的輸入框容器：保持純透明底，防與結果頁衝突 */
+.guide-home-input-container {
+  width: 100%;
+  max-width: 500px;
+  margin-top: auto;
+  padding: 16px 0;
+  background-color: transparent;
+}
+
+/* ==========================================================================
+   2. 導遊載入中頁 (GuideLoadingPage)
+   ========================================================================== */
+.guide-loading-page {
+  min-height: calc(100vh - 80px);
+  background: var(--dark-slate);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+/* 載入大卡：高亮橘框與科技掃描呼吸燈 */
+.guide-loading-card {
+  width: 180px;
+  height: 180px;
+  border-radius: 24px;
+  background: var(--medium-slate);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: var(--primary-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+  animation: loadingPulse 2s infinite ease-in-out;
+}
+
+/* 模擬相機自動掃描雷射光束 */
+.guide-loading-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--primary-gold), transparent);
+  animation: scanBeam 2.5s infinite linear;
+}
+
+.guide-loading-content p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ==========================================================================
+   3. 導覽結果與對話頁 (GuideResultPage)
+   ========================================================================== */
+.guide-result-page {
+  min-height: calc(100vh - 80px);
+  background: var(--light-slate);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 頂部景點卡片橫幅：漸層、高亮標籤 */
+.guide-result-hero {
+  height: 200px;
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, var(--dark-slate) 100%),
+              url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%231e293b"/></svg>');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  padding: 0 20px;
+  display: flex;
+  align-items: flex-end;
+}
+
+/* 重拍按鈕 */
+.guide-restart-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.guide-restart-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #ffffff;
+}
+
+.guide-result-info {
+  color: #ffffff;
+  margin-bottom: 20px;
+}
+
+.guide-result-info h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.guide-result-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+/* 語音導覽卡 (Audio Track) */
+.guide-audio-card {
+  margin: -16px 16px 20px;
+  min-height: 68px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  position: relative;
+  z-index: 2;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.guide-audio-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--primary-gold);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+}
+
+.guide-audio-button:hover {
+  background: var(--primary-gold-hover);
+  transform: scale(1.05);
+}
+
+.guide-audio-button:active {
+  transform: scale(0.95);
+}
+
+.guide-audio-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+  position: relative;
+}
+
+.guide-audio-progress {
+  height: 100%;
+  background: var(--dark-slate);
+  border-radius: 999px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 語音問答對話清單 (Chat List) */
+.guide-chat-list {
+  flex: 1;
+  padding: 12px 16px calc(100px + env(safe-area-inset-bottom, 16px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background-color: var(--light-slate);
+}
+
+.guide-chat-row {
+  display: flex;
+  width: 100%;
+}
+
+.guide-chat-row-assistant {
+  justify-content: flex-start;
+}
+
+.guide-chat-row-user {
+  justify-content: flex-end;
+}
+
+/* 氣泡樣式：白底灰字，使用者深色底 */
+.guide-chat-bubble {
+  max-width: 85%;
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: var(--shadow-sm);
+  word-wrap: break-word;
+}
+
+.guide-chat-row-assistant .guide-chat-bubble {
+  border-bottom-left-radius: 4px;
+}
+
+.guide-chat-row-user .guide-chat-bubble {
+  background: var(--dark-slate);
+  color: #ffffff;
+  border: none;
+  border-bottom-right-radius: 4px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+/* 黏性底部輸入框區域 (Sticky Input) */
+.guide-chat-input-area {
+  position: sticky;
+  bottom: 0;
+  background: #ffffff;
+  border-top: 1px solid var(--border-color);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 12px));
+  z-index: 10;
+}
+
+/* 膠囊式輸入框外圍 */
+.guide-chat-input-wrap {
+  background-color: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 4px 6px 4px 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.01);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.guide-chat-input-wrap:focus-within {
+  border-color: var(--primary-gold);
+  background-color: #ffffff;
+}
+
+.guide-chat-input-wrap input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  color: var(--dark-slate);
+  padding: 8px 0;
+}
+
+.guide-chat-input-wrap input::placeholder {
+  color: var(--text-muted);
+}
+
+/* 語音按鈕 */
+.guide-mic-button {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.guide-mic-button:hover {
+  color: var(--dark-slate);
+  background-color: #f1f5f9;
+}
+
+.guide-mic-button.recording {
+  background-color: rgba(234, 88, 12, 0.1);
+  animation: pulseRecording 1.2s infinite alternate;
+}
+
+/* 發送按鈕 */
+.guide-send-button {
+  background-color: var(--dark-slate);
+  color: #ffffff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.guide-send-button:hover:not(:disabled) {
+  background-color: var(--primary-gold);
+  transform: scale(1.05);
+}
+
+.guide-send-button:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.guide-send-button:disabled {
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   動畫與響應式微調
+   ========================================================================== */
+@keyframes loadingPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 15px 35px rgba(245, 158, 11, 0.15);
+  }
+}
+
+@keyframes scanBeam {
+  0% { top: 0%; }
+  50% { top: 98%; }
+  100% { top: 0%; }
+}
+
+@keyframes pulseRecording {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.3); }
+  100% { transform: scale(1.1); box-shadow: 0 0 8px 2px rgba(234, 88, 12, 0); }
+}
+
+/* ==========================================================================
+   📱 響應式手機版佈局與 Header 終極鎖定防禦
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* 鎖定全域視窗，防止橡皮筋回彈與底層拉動造成的 Header 偏移 */
+  html, body, #root, .app-shell {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  /* 🎯 將頂部導覽列固定在手機螢幕最上方，永不因滾動而消失 */
+  .top-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 64px !important;
+    width: 100% !important;
+    background-color: #ffffff !important;
+    z-index: 1001 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06) !important;
+    display: flex !important;
+  }
+
+  /* 配合固定 Header 往下位移，防止內容被遮擋 */
+  .main-panel {
+    padding-top: 64px !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  /* 精確限制 page-content 的高度，確保只有其內部獨立滾動 */
+  .page-content {
+    height: calc(100dvh - 64px - 76px) !important; /* 扣除 Header (64px) 與 Tabbar (76px) */
+    overflow-y: auto !important;
+    padding-top: 12px !important;
+    padding-bottom: 24px !important;
+  }
+
+  /* 原有手機版導遊首頁尺寸微調 */
+  .guide-page {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 16px)) !important;
+  }
+  
+  .guide-camera-circle {
+    width: 140px;
+    height: 140px;
+  }
+
+  .guide-hero h1 { font-size: 22px; }
+  .guide-hero p { font-size: 13px; padding: 0 12px; }
+  .guide-upload-button { font-size: 14px; padding: 12px 24px; }
+  .guide-loading-card { width: 140px; height: 140px; }
+  .guide-result-hero { height: 160px; }
+  
+  .guide-audio-card {
+    margin: -16px 12px 16px;
+    padding: 10px 16px;
+  }
+
+  .guide-chat-list {
+    padding: 12px 12px calc(80px + env(safe-area-inset-bottom, 12px));
+  }
+
+  .guide-chat-row-assistant .guide-chat-bubble,
+  .guide-chat-row-user .guide-chat-bubble {
+    max-width: 88%;
+  }
+
+  .guide-chat-bubble { font-size: 13px; }
+}
