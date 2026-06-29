@@ -12,7 +12,7 @@ import type {
 const uiText = {
   heroTitle: { zh: "專屬行程規劃", en: "Itinerary Planning" },
   heroDesc: { zh: "基於您的入住資訊為您量身打造。", en: "Tailor-made based on your check-in information and preferences." },
-  placeholder: { zh: "輸入調整需求，例如：我想把下午行程延後半小時...", en: "Type your update requests here..." },
+  placeholder: { zh: "輸入調整需求", en: "Type your update requests here..." },
   recordingPlaceholder: { zh: "正在聆聽語音中... 請對著麥克風說話...", en: "Listening... Please speak into the mic..." },
   alertFailed: { zh: "意見提交失敗，詳細錯誤請見控制台 (F12)", en: "Submission failed, please check Console (F12)" },
   aiTitle: { zh: "AI 行程規劃師", en: "AI Itinerary Architect" },
@@ -29,6 +29,9 @@ const getStaticUrl = (url?: string) => {
 function ItineraryPage() {
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
   const recognitionRef = useRef<any>(null);
+  
+  // 控制目前播放中的音訊物件，防範新舊語音重疊
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [itineraryList, setItineraryList] = useState<ItineraryDateGroup[]>([]);
   const [selectedDate, setSelectedDate] = useState("");
@@ -40,26 +43,41 @@ function ItineraryPage() {
   const [aiStatus, setAiStatus] = useState<"idle" | "thinking" | "responded">("idle");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   
-  // 🚀 升級狀態：儲存當前點開看完整行程內容的物件
+  // 儲存當前點開看完整行程內容的物件
   const [activeDetailItem, setActiveDetailItem] = useState<ItineraryScheduleResponse | null>(null);
 
-  const fetchItinerary = async () => {
+  // 🚀 使用 useRef 追蹤 selectedDate 以防非同步 closure 讀到舊值
+  const selectedDateRef = useRef(selectedDate);
+  useEffect(() => {
+    selectedDateRef.current = selectedDate;
+  }, [selectedDate]);
+
+  // 載入行程列表時允許指定 targetDate 來保持目前編輯的日期
+  const fetchItinerary = async (targetDate?: string) => {
     const data = await getExclusiveItinerary();
     const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
     setItineraryList(sortedData);
 
-    if (data.length > 0 && !selectedDate) {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, "0");
-      const dd = String(today.getDate()).padStart(2, "0");
-      const todayStr = `${yyyy}-${mm}-${dd}`;
+    if (sortedData.length > 0) {
+      // 優先順序：1. 剛剛修改保留的日期 -> 2. 當前選取的日期 -> 3. 今天 -> 4. 行程第一天
+      const activeDate = targetDate || selectedDateRef.current;
+      const hasActiveDate = sortedData.some((item) => item.date === activeDate);
 
-      const hasToday = data.some((item) => item.date === todayStr);
-      if (hasToday) {
-        setSelectedDate(todayStr);
+      if (activeDate && hasActiveDate) {
+        setSelectedDate(activeDate);
       } else {
-        setSelectedDate(data[0].date);
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, "0");
+        const dd = String(today.getDate()).padStart(2, "0");
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+
+        const hasToday = sortedData.some((item) => item.date === todayStr);
+        if (hasToday) {
+          setSelectedDate(todayStr);
+        } else {
+          setSelectedDate(sortedData[0].date);
+        }
       }
     }
   };
@@ -67,6 +85,57 @@ function ItineraryPage() {
   useEffect(() => {
     fetchItinerary();
   }, []);
+
+  // 核心重構：封裝共用提交邏輯（支援手動點擊或語音自動發送）
+  const executeSubmit = async (textToSend: string, targetDate: string) => {
+    const text = textToSend.trim();
+    if (!text) return;
+
+    try {
+      setIsSubmitting(true);
+      setAiStatus("thinking");
+      setAiResponse(null);
+
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+
+      // 使用傳入的 targetDate 準確對接後端
+      const result = await submitFeedback(text, targetDate);
+      
+      if (result.success) {
+        setAiStatus("responded");
+        setAiResponse(result.message);
+        setFeedback("");
+
+        if (result.audio_base64) {
+          try {
+            console.log("🔊 收到專屬管家語音，準備播放...");
+            const audioUrl = `data:audio/mp3;base64,${result.audio_base64}`;
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+            await audio.play();
+          } catch (audioError) {
+            console.warn("⚠️ 瀏覽器阻擋了自動語音播放，等待使用者點擊頁面互動後播放。", audioError);
+          }
+        }
+
+        // 成功後強制重新整理並切換到該目標日期，維持狀態不跳頁
+        await fetchItinerary(targetDate);
+        setSelectedDate(targetDate); 
+
+      } else {
+        alert(result.message);
+        setAiStatus("idle");
+      }
+    } catch (error) {
+      setToastMsg(uiText.alertFailed[currentLang]);
+      setAiStatus("idle");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -80,6 +149,10 @@ function ItineraryPage() {
         const transcript = event.results[0][0].transcript;
         setFeedback(transcript); 
         setIsRecording(false);
+        
+        // 🚀 核心 Bug 修正：語音辨識結束自動發送時，使用 selectedDateRef.current 傳參
+        // 💡 如此一來，即可百分之百抓到當前選取的最新日期（例如 6/18），徹底避免因閉包過期而發送空字串致使日期跑掉的問題！
+        executeSubmit(transcript, selectedDateRef.current);
       };
 
       recognitionRef.current.onerror = () => {
@@ -104,33 +177,6 @@ function ItineraryPage() {
     } else {
       setIsRecording(false);
       recognitionRef.current.stop();
-    }
-  };
-
-  const handleSubmitFeedback = async () => {
-    const text = feedback.trim();
-    if (!text) return;
-
-    try {
-      setIsSubmitting(true);
-      setAiStatus("thinking");
-      setAiResponse(null);
-
-      const result = await submitFeedback(text, selectedDate);
-      if (result.success) {
-        setAiStatus("responded");
-        setAiResponse(result.message);
-        setFeedback("");
-        await fetchItinerary();
-      } else {
-        alert(result.message);
-        setAiStatus("idle");
-      }
-    } catch (error) {
-      setToastMsg(uiText.alertFailed[currentLang]);
-      setAiStatus("idle");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -177,11 +223,9 @@ function ItineraryPage() {
               <div className="timeline-card-body">
                 <div className="card-body-header">
                   <span className="time-badge">{item.time}</span>
-                  {/* 🚀 分類文字縮小並靠右對齊 */}
                   <span className="preference-tag alignment-right">{item.preference}</span>
                 </div>
                 <h3>{item.title}</h3>
-                {/* 🚀 內文文字縮小 */}
                 <p className="line-truncated-content text-muted-small">{item.content}</p>
               </div>
             </article>
@@ -202,7 +246,8 @@ function ItineraryPage() {
           <button className={`mic-button ${isRecording ? "recording" : ""}`} onClick={handleMicClick}>
             <Mic size={18} />
           </button>
-          <button className="send-button" onClick={() => handleSubmitFeedback()} disabled={isSubmitting || !feedback.trim()}>
+          
+          <button className="send-button" onClick={() => executeSubmit(feedback, selectedDate)} disabled={isSubmitting || !feedback.trim()}>
             <Send size={16} />
           </button>
         </div>
@@ -231,7 +276,7 @@ function ItineraryPage() {
         )}
       </section>
 
-      {/* 🚀 升級：頂級沉浸式行程完整內容彈窗 (Modal) */}
+      {/* 頂級沉浸式行程完整內容彈窗 (Modal) */}
       {activeDetailItem && (
         <div className="luxury-lightbox-overlay" onClick={() => setActiveDetailItem(null)}>
           <div className="luxury-detail-modal" onClick={(e) => e.stopPropagation()}>
