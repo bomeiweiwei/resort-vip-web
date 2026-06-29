@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { MapPin, Mic, Pause, Play, Send, Square, AlertCircle } from "lucide-react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 // 🎯 匯入統一管理的 API 函數 (指向相對路徑 src/apis/guideApi.ts)
-import { analyzeGuideInput, synthesizeGuideSpeech  } from "../apis/guideApi"; 
+import { analyzeGuideInput, synthesizeGuideSpeech } from "../apis/guideApi";
 import "../styles/guide.css";
 
 type ChatMessage = {
@@ -16,6 +18,7 @@ type GuideAnalysisResult = {
   title?: string;
   location?: string;
   guideMessage: string;
+  guideMessageText?: string;
   audioUrl?: string;
   imageUrl?: string;
   user_text?: string;
@@ -45,6 +48,42 @@ const detectLanguageFromText = (text?: string, fallback = "zh-TW"): string => {
   return normalizeGuideLanguage(fallback);
 };
 
+/**
+ * 給 TTS 使用的前端保險處理。
+ * 正常情況應該使用後端回傳的 guideMessageText。
+ * 這個函式是避免 mock 或舊版後端只回傳 guideMessage 時，TTS 念出 Markdown 符號。
+ */
+const markdownToSpeechText = (text?: string): string => {
+  return (text || "")
+    // 移除圖片 Markdown：![alt](url)
+    .replace(/!\[[^\]]*]\([^)]+\)/g, "")
+    // 連結 Markdown：[文字](url) -> 文字
+    .replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
+    // 移除粗體、斜體、刪除線、inline code、標題、引用符號
+    .replace(/[*_~`>#]/g, "")
+    // 移除 unordered list 前綴
+    .replace(/^\s*[-+]\s+/gm, "")
+    // 移除 ordered list 前綴
+    .replace(/^\s*\d+\.\s+/gm, "")
+    // 移除 Markdown 分隔線
+    .replace(/^\s*-{3,}\s*$/gm, "")
+    // 壓縮過多空行
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+
+const getGuideSpeechText = (result?: {
+  guideMessage?: string;
+  guideMessageText?: string;
+}): string => {
+  const plainText = (result?.guideMessageText || "").trim();
+
+  if (plainText) {
+    return plainText;
+  }
+
+  return markdownToSpeechText(result?.guideMessage);
+};
 
 const getSupportedAudioMimeType = (): string => {
   if (!window.MediaRecorder) return "";
@@ -55,16 +94,113 @@ const getSupportedAudioMimeType = (): string => {
   return "";
 };
 
+const createAudioContext = (): AudioContext => {
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+  if (!AudioContextClass) {
+    throw new Error("目前瀏覽器不支援 AudioContext，無法轉換 WAV。");
+  }
+
+  return new AudioContextClass();
+};
+
+/**
+ * 將 MediaRecorder 錄到的 webm / ogg / mp4 音檔轉成真正的 WAV。
+ * 輸出格式：audio/wav、PCM、16000 Hz、16-bit、Mono。
+ */
+const convertBlobToWav = async (blob: Blob): Promise<Blob> => {
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = createAudioContext();
+
+  try {
+    const decodedAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const targetSampleRate = 16000;
+    const targetChannels = 1;
+    const targetLength = Math.max(
+      1,
+      Math.ceil(decodedAudioBuffer.duration * targetSampleRate)
+    );
+
+    const offlineContext = new OfflineAudioContext(
+      targetChannels,
+      targetLength,
+      targetSampleRate
+    );
+
+    const source = offlineContext.createBufferSource();
+    source.buffer = decodedAudioBuffer;
+    source.connect(offlineContext.destination);
+    source.start(0);
+
+    const renderedBuffer = await offlineContext.startRendering();
+    const monoData = renderedBuffer.getChannelData(0);
+
+    return encodeWavPCM16(monoData, targetSampleRate);
+  } finally {
+    await audioContext.close().catch(() => undefined);
+  }
+};
+
+const encodeWavPCM16 = (samples: Float32Array, sampleRate: number): Blob => {
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = samples.length * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  // RIFF header
+  writeString(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(view, 8, "WAVE");
+
+  // fmt chunk
+  writeString(view, 12, "fmt ");
+  view.setUint32(16, 16, true); // PCM header size
+  view.setUint16(20, 1, true); // Audio format: 1 = PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+
+  // data chunk
+  writeString(view, 36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+
+  for (let i = 0; i < samples.length; i++) {
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+    const int16 = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    view.setInt16(offset, int16, true);
+    offset += 2;
+  }
+
+  return new Blob([buffer], { type: "audio/wav" });
+};
+
+const writeString = (view: DataView, offset: number, value: string) => {
+  for (let i = 0; i < value.length; i++) {
+    view.setUint8(offset + i, value.charCodeAt(i));
+  }
+};
+
 const translations = {
   retake: { zh: "重拍", en: "Retake" },
   placeholder: { zh: "輸入文字或點擊右方錄音...", en: "Type a message or click mic to record..." },
   voiceSending: { zh: "🎤 [語音訊息處理中...]", en: "🎤 [Processing voice message...]" },
   voiceError: { zh: "無法存取麥克風設備，請確認權限。", en: "Unable to access microphone. Please check permissions." },
-  ttsBlock: { zh: "語音自動播放已被阻擋，請手動點擊 Play。", en: "Audio auto-play blocked. Please click play to listen." }
+  ttsBlock: { zh: "語音自動播放已被阻擋，請手動點擊 Play。", en: "Audio auto-play blocked. Please click play to listen." },
 };
 
 /**
- * 🎯 景點圖片解析器 (優先採用後端 Python 回傳之圖片路徑，若無則精準 fallback)
+ * 🎯 景點圖片解析器
+ * 優先採用後端 Python 回傳之圖片路徑，若無則精準 fallback。
  */
 const toGuideImageUrl = (backendImageUrl?: string): string => {
   const imageUrl = (backendImageUrl || "").trim();
@@ -102,24 +238,31 @@ const getAttractionImage = (title: string, backendImageUrl?: string): string => 
   }
 
   const lowerTitle = (title || "").toLowerCase();
+
   if (lowerTitle.includes("亭") || lowerTitle.includes("pavilion")) {
     return "https://images.unsplash.com/photo-1542044896530-05d85be9b11a?auto=format&fit=crop&w=800&q=80";
   }
+
   if (lowerTitle.includes("水舞") || lowerTitle.includes("fountain") || lowerTitle.includes("plaza")) {
     return "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80";
   }
+
   if (lowerTitle.includes("泳池") || lowerTitle.includes("pool")) {
     return "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80";
   }
+
   return "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80";
 };
 
 export default function GuideResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const context = useOutletContext<any>();
-  const currentLang = (context && typeof context === "object" && context.currentLang === "en") ? "en" : "zh";
+  const currentLang =
+    context && typeof context === "object" && context.currentLang === "en"
+      ? "en"
+      : "zh";
 
   const backendResult = location.state?.analysisResult as GuideAnalysisResult | undefined;
 
@@ -127,7 +270,7 @@ export default function GuideResultPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  
+
   // 🎯 自訂 Toast 錯誤狀態，用來取代不安全的原生 alert()
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
@@ -140,14 +283,16 @@ export default function GuideResultPage() {
   const mainTtsKeyRef = useRef<string | null>(null);
   const mainTtsPromiseRef = useRef<Promise<Blob> | null>(null);
   const mainTtsRequestIdRef = useRef(0);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  
+
   // 用於 Web 底端對話自動滑動定位的錨點
   const chatListEndRef = useRef<HTMLDivElement | null>(null);
-  
+
   // React 專利：用 messagesRef 鎖定對話，防止非同步 MediaRecorder 閉包抓到舊狀態
   const messagesRef = useRef<ChatMessage[]>([]);
+
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
@@ -168,14 +313,16 @@ export default function GuideResultPage() {
 
     setMessages([{ id: 1, role: "assistant", text: backendResult.guideMessage }]);
 
+    const speechText = getGuideSpeechText(backendResult);
+
     const speechLanguage = backendResult.responseLanguage
       ? normalizeGuideLanguage(backendResult.responseLanguage)
       : detectLanguageFromText(
-          backendResult.guideMessage,
+          speechText,
           currentLang === "en" ? "en-US" : "zh-TW"
         );
 
-    const ttsKey = `${backendResult.guideMessage}::${speechLanguage}`;
+    const ttsKey = `${speechText}::${speechLanguage}`;
     let isCancelled = false;
     const requestId = ++mainTtsRequestIdRef.current;
 
@@ -199,7 +346,7 @@ export default function GuideResultPage() {
 
     const prepareGuideSpeech = async () => {
       try {
-        if (!backendResult.guideMessage) return;
+        if (!speechText) return;
 
         // 同一段導覽文字 + 同一語系，只建立一個 TTS 請求。
         // React 18 StrictMode 在 dev 會讓 useEffect 跑兩次，這裡可以避免產生兩個 audio。
@@ -207,7 +354,7 @@ export default function GuideResultPage() {
           releaseMainAudio();
           mainTtsKeyRef.current = ttsKey;
           mainTtsPromiseRef.current = synthesizeGuideSpeech({
-            text: backendResult.guideMessage,
+            text: speechText,
             language: speechLanguage,
           });
         }
@@ -230,7 +377,7 @@ export default function GuideResultPage() {
         audio.onpause = () => setIsPlaying(false);
         audio.onended = () => setIsPlaying(false);
 
-        // 不自動播放。只準備語音，讓使用者按紅色區域的播放按鈕。
+        // 不自動播放。只準備語音，讓使用者按播放按鈕。
         // 這樣可以避免 StrictMode 或瀏覽器自動播放造成「多一段不能暫停的語音」。
         setIsPlaying(false);
       } catch (error) {
@@ -264,7 +411,9 @@ export default function GuideResultPage() {
   }, [messages]);
 
   const playChatSpeech = async (text: string, language?: string) => {
-    if (!text.trim()) return;
+    const speechText = markdownToSpeechText(text);
+
+    if (!speechText.trim()) return;
 
     try {
       chatAudioRef.current?.pause();
@@ -279,10 +428,13 @@ export default function GuideResultPage() {
       }
 
       const audioBlob = await synthesizeGuideSpeech({
-        text,
+        text: speechText,
         language: language
           ? normalizeGuideLanguage(language)
-          : detectLanguageFromText(text, currentLang === "en" ? "en-US" : "zh-TW"),
+          : detectLanguageFromText(
+              speechText,
+              currentLang === "en" ? "en-US" : "zh-TW"
+            ),
       });
 
       const audioObjectUrl = URL.createObjectURL(audioBlob);
@@ -298,42 +450,68 @@ export default function GuideResultPage() {
       setErrorToast("語音導覽產生失敗，請稍後再試。");
     }
   };
-// 🎯 播放 / 暫停導遊 TTS 語音
-  const togglePlay = () => {
-  if (!mainAudioRef.current) {
-    setErrorToast("語音導覽尚未準備完成，請稍候再試。");
-    return;
-  }
 
-  if (isPlaying) {
-    mainAudioRef.current.pause();
-  } else {
-    chatAudioRef.current?.pause();
-    mainAudioRef.current
-      .play()
-      .then(() => setIsPlaying(true))
-      .catch(() => setIsPlaying(false));
-  }
-};
+  // 🎯 播放 / 暫停導遊 TTS 語音
+  const togglePlay = () => {
+    if (!mainAudioRef.current) {
+      setErrorToast("語音導覽尚未準備完成，請稍候再試。");
+      return;
+    }
+
+    if (isPlaying) {
+      mainAudioRef.current.pause();
+    } else {
+      chatAudioRef.current?.pause();
+      mainAudioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => setIsPlaying(false));
+    }
+  };
 
   // 文字追問
   const handleSend = async () => {
     const text = message.trim();
+
     if (!text) return;
-    const userMessage: ChatMessage = { id: Date.now(), role: "user", text };
+
+    const userMessage: ChatMessage = {
+      id: Date.now(),
+      role: "user",
+      text,
+    };
+
     const currentHistory = [...messages, userMessage];
+
     setMessages(currentHistory);
     setMessage("");
 
     try {
       const data = await analyzeGuideInput({
-        text: text, 
-        attractionTitle: backendResult?.title || "未知景點", 
+        text,
+        attractionTitle: backendResult?.title || "未知景點",
         language: currentLang,
-        history: JSON.stringify(currentHistory) // 將包含最新訊息的歷史對話轉 JSON 發送
+        history: JSON.stringify(currentHistory), // 將包含最新訊息的歷史對話轉 JSON 發送
       });
-      setMessages((prev) => [...prev, { id: Date.now() + 1, role: "assistant", text: data.guideMessage }]);
-      await playChatSpeech(data.guideMessage, (data as any).responseLanguage || detectLanguageFromText(text, currentLang === "en" ? "en-US" : "zh-TW"));
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          text: data.guideMessage,
+        },
+      ]);
+
+      const speechText = getGuideSpeechText(data);
+      const speechLanguage =
+        data.responseLanguage ||
+        detectLanguageFromText(
+          speechText || text,
+          currentLang === "en" ? "en-US" : "zh-TW"
+        );
+
+      await playChatSpeech(speechText, speechLanguage);
     } catch (err: any) {
       console.error("Send message error:", err);
       const backendErrorMsg = err.response?.data?.detail;
@@ -348,59 +526,101 @@ export default function GuideResultPage() {
     if (isRecording) {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
         mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
       }
+
       setIsRecording(false);
-    } else {
-      if (mainAudioRef.current) mainAudioRef.current.pause();
-      if (chatAudioRef.current) chatAudioRef.current.pause();
+      return;
+    }
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const mimeType = getSupportedAudioMimeType();
-        const mediaRecorder = mimeType
-          ? new MediaRecorder(stream, { mimeType })
-          : new MediaRecorder(stream);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-        mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) audioChunksRef.current.push(event.data); };
-        
-        mediaRecorder.onstop = async () => {
-          const audioType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
-          const audioBlob = new Blob(audioChunksRef.current, { type: audioType });
-          const userMsgId = Date.now();
-          const userVoicePlaceholder: ChatMessage = { id: userMsgId, role: "user", text: translations.voiceSending[currentLang] };
-          
-          const preApiHistory = [...messagesRef.current, userVoicePlaceholder];
-          setMessages(preApiHistory);
-          
-          try {
-            const data = await analyzeGuideInput({
-              voice: audioBlob, 
-              attractionTitle: backendResult?.title || "未知景點", 
-              language: currentLang,
-              history: JSON.stringify(messagesRef.current) // 發送此音檔之前的對話歷史給後端
-            });
+    if (mainAudioRef.current) mainAudioRef.current.pause();
+    if (chatAudioRef.current) chatAudioRef.current.pause();
 
-            setMessages((prev) =>
-              prev.map(msg => msg.id === userMsgId ? { ...msg, text: `🎤 ${data.user_text || "..."}` } : msg)
-              .concat({ id: Date.now() + 1, role: "assistant", text: data.guideMessage })
-            );
-            await playChatSpeech(
-              data.guideMessage,
-              (data as any).responseLanguage || detectLanguageFromText(data.user_text || "", currentLang === "en" ? "en-US" : "zh-TW")
-            );
-          } catch (err: any) {
-            console.error(err);
-            const backendErrorMsg = err.response?.data?.detail;
-            setErrorToast(backendErrorMsg || "語音分析失敗，請稍後再試。");
-          }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = getSupportedAudioMimeType();
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const userMsgId = Date.now();
+        const historyBeforeVoice = [...messagesRef.current];
+
+        const userVoicePlaceholder: ChatMessage = {
+          id: userMsgId,
+          role: "user",
+          text: translations.voiceSending[currentLang],
         };
-        mediaRecorder.start();
-        setIsRecording(true);
-      } catch (err) {
-        setErrorToast(translations.voiceError[currentLang]);
-      }
+
+        setMessages([...historyBeforeVoice, userVoicePlaceholder]);
+
+        try {
+          const audioType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
+
+          const rawAudioBlob = new Blob(audioChunksRef.current, {
+            type: audioType,
+          });
+
+          const wavBlob = await convertBlobToWav(rawAudioBlob);
+
+          const audioFile = new File(
+            [wavBlob],
+            `guide_voice_${Date.now()}.wav`,
+            { type: "audio/wav" }
+          );
+
+          // 這裡送出的 voice 已經是真正的 WAV：audio/wav、PCM、16000 Hz、16-bit、Mono。
+          const data = await analyzeGuideInput({
+            voice: audioFile,
+            attractionTitle: backendResult?.title || "未知景點",
+            language: currentLang,
+            history: JSON.stringify(historyBeforeVoice), // 發送此音檔之前的對話歷史給後端
+          });
+
+          setMessages((prev) =>
+            prev
+              .map((msg) =>
+                msg.id === userMsgId
+                  ? { ...msg, text: `🎤 ${data.user_text || "..."}` }
+                  : msg
+              )
+              .concat({
+                id: Date.now() + 1,
+                role: "assistant",
+                text: data.guideMessage,
+              })
+          );
+
+          const speechText = getGuideSpeechText(data);
+          const speechLanguage =
+            data.responseLanguage ||
+            detectLanguageFromText(
+              speechText || data.user_text || "",
+              currentLang === "en" ? "en-US" : "zh-TW"
+            );
+
+          await playChatSpeech(speechText, speechLanguage);
+        } catch (err: any) {
+          console.error(err);
+          const backendErrorMsg = err.response?.data?.detail;
+          setErrorToast(backendErrorMsg || "語音分析失敗，請稍後再試。");
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      setErrorToast(translations.voiceError[currentLang]);
     }
   };
 
@@ -409,8 +629,15 @@ export default function GuideResultPage() {
   const heroImageUrl = getAttractionImage(currentTitle, backendResult?.imageUrl);
 
   return (
-    <main className="guide-result-page" style={{ display: "flex", flexDirection: "column", minHeight: "100vh", paddingBottom: "150px" }}>
-      
+    <main
+      className="guide-result-page"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "100vh",
+        paddingBottom: "150px",
+      }}
+    >
       {/* 🎯 CSS 內嵌樣式表：Web 狀態優化，而絕對不改動手機版原有外觀樣式 */}
       <style>{`
         @media (min-width: 1024px) {
@@ -449,37 +676,39 @@ export default function GuideResultPage() {
 
       {/* 🎯 自訂 Toast 橫幅 UI：高雅、精緻，符合豪華渡假村風格 */}
       {errorToast && (
-        <div style={{
-          position: "absolute",
-          top: "24px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "#1e293b",
-          color: "#fff",
-          padding: "12px 24px",
-          borderRadius: "30px",
-          boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
-          zIndex: 9999,
-          fontSize: "14px",
-          fontWeight: "500",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          border: "1px solid rgba(255, 255, 255, 0.15)",
-          whiteSpace: "nowrap"
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "24px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            backgroundColor: "#1e293b",
+            color: "#fff",
+            padding: "12px 24px",
+            borderRadius: "30px",
+            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
+            zIndex: 9999,
+            fontSize: "14px",
+            fontWeight: "500",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            whiteSpace: "nowrap",
+          }}
+        >
           <AlertCircle size={18} style={{ color: "#f59e0b" }} />
           <span>{errorToast}</span>
-          <button 
-            onClick={() => setErrorToast(null)} 
-            style={{ 
-              background: "none", 
-              border: "none", 
-              color: "rgba(255, 255, 255, 0.6)", 
-              cursor: "pointer", 
+          <button
+            onClick={() => setErrorToast(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "rgba(255, 255, 255, 0.6)",
+              cursor: "pointer",
               fontSize: "18px",
               marginLeft: "10px",
-              lineHeight: 1
+              lineHeight: 1,
             }}
           >
             ×
@@ -487,49 +716,111 @@ export default function GuideResultPage() {
         </div>
       )}
 
-      <section 
+      <section
         className="guide-result-hero"
         style={{
           backgroundImage: `linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, var(--dark-slate) 100%), url(${heroImageUrl})`,
-          backgroundSize: "cover", backgroundPosition: "center"
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
-        <button type="button" className="guide-restart-button" onClick={() => navigate("/guide")}>{translations.retake[currentLang]}</button>
+        <button
+          type="button"
+          className="guide-restart-button"
+          onClick={() => navigate("/guide")}
+        >
+          {translations.retake[currentLang]}
+        </button>
+
         <div className="guide-result-info">
           <h1>{currentTitle}</h1>
-          <div className="guide-result-location"><MapPin size={16} /><span>{currentLocation}</span></div>
+          <div className="guide-result-location">
+            <MapPin size={16} />
+            <span>{currentLocation}</span>
+          </div>
         </div>
       </section>
 
       <section className="guide-audio-card">
-        <button type="button" className="guide-audio-button" onClick={togglePlay}>{isPlaying ? <Pause size={22} /> : <Play size={22} />}</button>
-        <div className="guide-audio-track"><div className="guide-audio-progress" style={{ width: isPlaying ? "85%" : "0%" }} /></div>
+        <button type="button" className="guide-audio-button" onClick={togglePlay}>
+          {isPlaying ? <Pause size={22} /> : <Play size={22} />}
+        </button>
+
+        <div className="guide-audio-track">
+          <div
+            className="guide-audio-progress"
+            style={{ width: isPlaying ? "85%" : "0%" }}
+          />
+        </div>
       </section>
 
       <section className="guide-chat-list" style={{ flexGrow: 1, paddingBottom: "20px" }}>
         {messages.map((item) => (
-          <div key={item.id} className={item.role === "user" ? "guide-chat-row guide-chat-row-user" : "guide-chat-row guide-chat-row-assistant"}>
-            <div className="guide-chat-bubble">{item.text}</div>
+          <div
+            key={item.id}
+            className={
+              item.role === "user"
+                ? "guide-chat-row guide-chat-row-user"
+                : "guide-chat-row guide-chat-row-assistant"
+            }
+          >
+            <div className="guide-chat-bubble">
+              {item.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {item.text}
+                </ReactMarkdown>
+              ) : (
+                item.text
+              )}
+            </div>
           </div>
         ))}
+
         {/* 用於 Web 獨立滾動的錨點 */}
         <div ref={chatListEndRef} />
       </section>
 
-      <section className="guide-chat-input-area" style={{ position: "fixed", bottom: "65px", left: 0, width: "100%", zIndex: 99, backgroundColor: "#ffffff" }}>
+      <section
+        className="guide-chat-input-area"
+        style={{
+          position: "fixed",
+          bottom: "65px",
+          left: 0,
+          width: "100%",
+          zIndex: 99,
+          backgroundColor: "#ffffff",
+        }}
+      >
         <div className="guide-chat-input-wrap">
-          <input type="text" placeholder={translations.placeholder[currentLang]} value={message} onChange={(e) => setMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSend()} />
-          
+          <input
+            type="text"
+            placeholder={translations.placeholder[currentLang]}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          />
+
           {/* 麥克風按鈕：單擊 onClick 進行錄音狀態切換 */}
-          <button 
-            type="button" 
-            className={`guide-mic-button ${isRecording ? "recording" : ""}`} 
+          <button
+            type="button"
+            className={`guide-mic-button ${isRecording ? "recording" : ""}`}
             onClick={toggleRecording}
           >
-            {isRecording ? <Square size={16} style={{ color: "#ef4444" }} /> : <Mic size={18} />}
+            {isRecording ? (
+              <Square size={16} style={{ color: "#ef4444" }} />
+            ) : (
+              <Mic size={18} />
+            )}
           </button>
-          
-          <button type="button" className="guide-send-button" onClick={handleSend} disabled={!message.trim()}><Send size={18} /></button>
+
+          <button
+            type="button"
+            className="guide-send-button"
+            onClick={handleSend}
+            disabled={!message.trim()}
+          >
+            <Send size={18} />
+          </button>
         </div>
       </section>
     </main>

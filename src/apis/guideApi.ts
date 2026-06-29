@@ -17,7 +17,8 @@ export type GuideResponse = {
   success: boolean;
   title: string;       
   location: string;    
-  guideMessage: string; 
+  guideMessage: string;
+  guideMessageText?: string; 
   audioUrl?: string;   
   imageUrl?: string;   // 後端 Python 傳回的景點圖片 URL (可為相對路徑或絕對路徑)
   user_text?: string;
