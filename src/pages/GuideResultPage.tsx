@@ -94,6 +94,102 @@ const getSupportedAudioMimeType = (): string => {
   return "";
 };
 
+const createAudioContext = (): AudioContext => {
+  const AudioContextClass =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+  if (!AudioContextClass) {
+    throw new Error("目前瀏覽器不支援 AudioContext，無法轉換 WAV。");
+  }
+
+  return new AudioContextClass();
+};
+
+/**
+ * 將 MediaRecorder 錄到的 webm / ogg / mp4 音檔轉成真正的 WAV。
+ * 輸出格式：audio/wav、PCM、16000 Hz、16-bit、Mono。
+ */
+const convertBlobToWav = async (blob: Blob): Promise<Blob> => {
+  const arrayBuffer = await blob.arrayBuffer();
+  const audioContext = createAudioContext();
+
+  try {
+    const decodedAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const targetSampleRate = 16000;
+    const targetChannels = 1;
+    const targetLength = Math.max(
+      1,
+      Math.ceil(decodedAudioBuffer.duration * targetSampleRate)
+    );
+
+    const offlineContext = new OfflineAudioContext(
+      targetChannels,
+      targetLength,
+      targetSampleRate
+    );
+
+    const source = offlineContext.createBufferSource();
+    source.buffer = decodedAudioBuffer;
+    source.connect(offlineContext.destination);
+    source.start(0);
+
+    const renderedBuffer = await offlineContext.startRendering();
+    const monoData = renderedBuffer.getChannelData(0);
+
+    return encodeWavPCM16(monoData, targetSampleRate);
+  } finally {
+    await audioContext.close().catch(() => undefined);
+  }
+};
+
+const encodeWavPCM16 = (samples: Float32Array, sampleRate: number): Blob => {
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = samples.length * bytesPerSample;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+
+  // RIFF header
+  writeString(view, 0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(view, 8, "WAVE");
+
+  // fmt chunk
+  writeString(view, 12, "fmt ");
+  view.setUint32(16, 16, true); // PCM header size
+  view.setUint16(20, 1, true); // Audio format: 1 = PCM
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+
+  // data chunk
+  writeString(view, 36, "data");
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+
+  for (let i = 0; i < samples.length; i++) {
+    const sample = Math.max(-1, Math.min(1, samples[i]));
+    const int16 = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+    view.setInt16(offset, int16, true);
+    offset += 2;
+  }
+
+  return new Blob([buffer], { type: "audio/wav" });
+};
+
+const writeString = (view: DataView, offset: number, value: string) => {
+  for (let i = 0; i < value.length; i++) {
+    view.setUint8(offset + i, value.charCodeAt(i));
+  }
+};
+
 const translations = {
   retake: { zh: "重拍", en: "Retake" },
   placeholder: { zh: "輸入文字或點擊右方錄音...", en: "Type a message or click mic to record..." },
@@ -457,9 +553,8 @@ export default function GuideResultPage() {
       };
 
       mediaRecorder.onstop = async () => {
-        const audioType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
-        const audioBlob = new Blob(audioChunksRef.current, { type: audioType });
         const userMsgId = Date.now();
+        const historyBeforeVoice = [...messagesRef.current];
 
         const userVoicePlaceholder: ChatMessage = {
           id: userMsgId,
@@ -467,15 +562,29 @@ export default function GuideResultPage() {
           text: translations.voiceSending[currentLang],
         };
 
-        const preApiHistory = [...messagesRef.current, userVoicePlaceholder];
-        setMessages(preApiHistory);
+        setMessages([...historyBeforeVoice, userVoicePlaceholder]);
 
         try {
+          const audioType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
+
+          const rawAudioBlob = new Blob(audioChunksRef.current, {
+            type: audioType,
+          });
+
+          const wavBlob = await convertBlobToWav(rawAudioBlob);
+
+          const audioFile = new File(
+            [wavBlob],
+            `guide_voice_${Date.now()}.wav`,
+            { type: "audio/wav" }
+          );
+
+          // 這裡送出的 voice 已經是真正的 WAV：audio/wav、PCM、16000 Hz、16-bit、Mono。
           const data = await analyzeGuideInput({
-            voice: audioBlob,
+            voice: audioFile,
             attractionTitle: backendResult?.title || "未知景點",
             language: currentLang,
-            history: JSON.stringify(messagesRef.current), // 發送此音檔之前的對話歷史給後端
+            history: JSON.stringify(historyBeforeVoice), // 發送此音檔之前的對話歷史給後端
           });
 
           setMessages((prev) =>

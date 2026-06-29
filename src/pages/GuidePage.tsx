@@ -92,6 +92,76 @@ export default function GuidePage() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         const mimeType = getSupportedAudioMimeType();
+        const convertBlobToWav = async (blob: Blob): Promise<Blob> => {
+          const arrayBuffer = await blob.arrayBuffer();
+
+          const audioContext = new AudioContext();
+          const decodedAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          await audioContext.close();
+
+          const targetSampleRate = 16000;
+          const numberOfChannels = 1;
+          const targetLength = Math.ceil(decodedAudioBuffer.duration * targetSampleRate);
+
+          const offlineContext = new OfflineAudioContext(
+            numberOfChannels,
+            targetLength,
+            targetSampleRate
+          );
+
+          const source = offlineContext.createBufferSource();
+          source.buffer = decodedAudioBuffer;
+          source.connect(offlineContext.destination);
+          source.start(0);
+
+          const renderedBuffer = await offlineContext.startRendering();
+          const monoData = renderedBuffer.getChannelData(0);
+
+          return encodeWavPCM16(monoData, targetSampleRate);
+        };
+
+        const encodeWavPCM16 = (samples: Float32Array, sampleRate: number): Blob => {
+          const numChannels = 1;
+          const bitsPerSample = 16;
+          const bytesPerSample = bitsPerSample / 8;
+          const blockAlign = numChannels * bytesPerSample;
+          const byteRate = sampleRate * blockAlign;
+          const dataSize = samples.length * bytesPerSample;
+          const buffer = new ArrayBuffer(44 + dataSize);
+          const view = new DataView(buffer);
+
+          writeString(view, 0, "RIFF");
+          view.setUint32(4, 36 + dataSize, true);
+          writeString(view, 8, "WAVE");
+
+          writeString(view, 12, "fmt ");
+          view.setUint32(16, 16, true);
+          view.setUint16(20, 1, true); // PCM
+          view.setUint16(22, numChannels, true);
+          view.setUint32(24, sampleRate, true);
+          view.setUint32(28, byteRate, true);
+          view.setUint16(32, blockAlign, true);
+          view.setUint16(34, bitsPerSample, true);
+
+          writeString(view, 36, "data");
+          view.setUint32(40, dataSize, true);
+
+          let offset = 44;
+          for (let i = 0; i < samples.length; i++) {
+            const sample = Math.max(-1, Math.min(1, samples[i]));
+            const int16 = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+            view.setInt16(offset, int16, true);
+            offset += 2;
+          }
+
+          return new Blob([buffer], { type: "audio/wav" });
+        };
+
+        const writeString = (view: DataView, offset: number, value: string) => {
+          for (let i = 0; i < value.length; i++) {
+            view.setUint8(offset + i, value.charCodeAt(i));
+          }
+        };
         const mediaRecorder = mimeType
           ? new MediaRecorder(stream, { mimeType })
           : new MediaRecorder(stream);
@@ -102,11 +172,29 @@ export default function GuidePage() {
           if (event.data.size > 0) audioChunksRef.current.push(event.data);
         };
         
-        mediaRecorder.onstop = () => {
-          const audioType = mediaRecorder.mimeType || mimeType || "audio/webm";
-          const audioBlob = new Blob(audioChunksRef.current, { type: audioType });
-          // 帶著真實格式的語音 Blob，轉場前往 Loading 中介頁面；不要假裝成 audio/wav。
-          navigate("/guide/loading", { state: { voiceBlob: audioBlob } });
+        mediaRecorder.onstop = async () => {
+          try {
+            const audioType = mediaRecorder.mimeType || mimeType || "audio/webm";
+
+            const rawAudioBlob = new Blob(audioChunksRef.current, {
+              type: audioType,
+            });
+
+            const wavBlob = await convertBlobToWav(rawAudioBlob);
+
+            const wavFile = new File(
+              [wavBlob],
+              `guide_voice_${Date.now()}.wav`,
+              { type: "audio/wav" }
+            );
+
+            navigate("/guide/loading", {
+              state: { voiceBlob: wavFile },
+            });
+          } catch (error) {
+            console.error("錄音檔轉 WAV 失敗：", error);
+            alert("錄音檔轉 WAV 失敗，請重新錄音。");
+          }
         };
 
         mediaRecorder.start();
