@@ -315,3 +315,89 @@ flex-shrink: 0;
 }
 
 }
+
+
+/* ==========================================================================
+   AI Loading 三點跳動動畫
+   ========================================================================== */
+.ai-thinking-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--vip-text-muted);
+  font-size: 14px;
+}
+
+.ai-thinking-dots .dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--vip-gold); /* 使用您的專屬金色 */
+  border-radius: 50%;
+  display: inline-block;
+  animation: aiWave 1.4s infinite ease-in-out both;
+}
+
+/* 讓三個點點有錯開的延遲動態 */
+.ai-thinking-dots .dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.ai-thinking-dots .dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+/* 提示文字微調 */
+.thinking-text {
+  margin-left: 4px;
+  color: var(--vip-text-muted);
+}
+
+/* 星星 icon 旋轉動畫 */
+.ai-spin {
+  animation: spin 2s linear infinite;
+}
+/* ==========================================================================
+   動畫關鍵影格 (Keyframes) - 補上讓動畫動起來 🚀
+   ========================================================================== */
+
+/* 1. 三點跳動動畫 (aiWave) */
+@keyframes aiWave {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-6px); /* 向上跳動 6px */
+    opacity: 1;                  /* 跳起時顏色變亮 */
+  }
+}
+
+/* 2. 星星旋轉動畫 (spin) */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 3. 錄音中紅字閃爍動畫 (pulseListen) */
+@keyframes pulseListen {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 4. 麥克風錄音外圈呼吸動畫 (pulseRecordCircle) */
+@keyframes pulseRecordCircle {
+  from {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  to {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+  }
+}
