@@ -1,8 +1,6 @@
-/* 
-   ==========================================================================
+/* ==========================================================================
    RESORT VIP - 行程規劃專屬美化樣式表 (Itinerary.css)
-   ========================================================================== 
-*/
+   ========================================================================== */
 
 :root {
   --vip-gold: #f59e0b;
@@ -13,116 +11,57 @@
   --vip-text-main: #111827;
   --vip-text-muted: #4b5563;
   --vip-border: #e5e7eb;
-  --vip-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.03);}
-
-/* 錄音中 placeholder 紅字閃爍 */
-.feedback-input-wrap input.listening-placeholder::placeholder {
-color: #ef4444;
-font-weight: 600;
-animation: pulseListen 1.5s infinite alternate;
+  --vip-card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.03);
 }
 
-/* 麥克風錄音按鈕 */
-.mic-button {
-background: transparent;
-border: none;
-color: #9ca3af;
-cursor: pointer;
-padding: 8px;
-border-radius: 50%;
-display: flex;
-align-items: center;
-justify-content: center;
-transition: all 0.2s ease;
-}
-
-.mic-button:hover {
-color: var(--vip-text-main);
-background-color: #f3f4f6;
-}
-
-/* 錄音運作中狀態 */
-.mic-button.recording {
-background-color: rgba(239, 68, 68, 0.1);
-color: #ef4444;
-animation: pulseRecordCircle 1.2s infinite alternate;
-}
-
-/* 送出按鈕 */
-.send-button {
-background-color: #f3f4f6;
-color: #9ca3af;
-border: none;
-width: 40px;
-height: 40px;
-border-radius: 50%;
-display: flex;
-align-items: center;
-justify-content: center;
-cursor: pointer;
-transition: all 0.2s ease;
-flex-shrink: 0;
-}
-
-.send-button:not(:disabled) {
-background-color: #111827;
-color: #ffffff;
-}
-
-.send-button:not(:disabled):hover {
-background-color: var(--vip-gold);
-transform: scale(1.05);
-}
-
-.send-button:active:not(:disabled) {
-transform: scale(0.92);
-}
-
+/* ==========================================================================
+   🌌 頂部黑色背景區塊 (Itinerary Hero) - 比例縮小優化版 
+   ========================================================================== */
 .itinerary-hero {
-background: linear-gradient(135deg, #151f32 0%, #0b0f19 100%);
-padding: 24px 20px;
-border-radius: 24px;
-box-shadow: 0 12px 30px rgba(11, 15, 25, 0.25);
-margin: 16px;
-border: 1px solid rgba(255, 255, 255, 0.05);
-flex-shrink: 0;
+  background: linear-gradient(135deg, #151f32 0%, #0b0f19 100%);
+  padding: 16px 18px; /* 🚀 縮小內距 */
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(11, 15, 25, 0.25);
+  margin: 12px 16px 16px 16px; /* 🚀 縮小外距，讓畫面往上提 */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
 }
 
 .itinerary-hero h2 {
-font-size: 1.5rem;
-font-weight: 700;
-line-height: 1.3;
-margin-top: 0;
-margin-bottom: 8px;
-color: #ffffff;
+  font-size: 1.25rem; /* 🚀 縮小標題字體，文字密度更高 */
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 0;
+  margin-bottom: 6px;
+  color: #ffffff;
 }
 
 .itinerary-hero p {
-color: #94a3b8;
-font-size: 0.9rem;
-line-height: 1.4;
-margin-bottom: 20px;
+  color: #94a3b8;
+  font-size: 0.8rem; /* 🚀 縮小副標題字體 */
+  line-height: 1.4;
+  margin-bottom: 14px;
 }
 
-/* 篩選欄位與 RWD 排版 */
+/* 篩選欄位佈局 */
 .itinerary-filters {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-/* 篩選器膠囊式大按鈕 */
+/* 🚀 扁平化日期篩選盒 (38px 精緻膠囊設計) */
 .itinerary-filter {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0 18px;
-  height: 52px; /* 🚀 高度微調加高，點擊感更大氣舒服 */
-  border-radius: 20px;
+  padding: 0 14px;
+  height: 38px; /* 🚀 高度由 52px 壓縮至 38px，釋放視區空間 */
+  border-radius: 19px; /* 維持完美半圓膠囊 */
   color: #e5e7eb;
-  font-size: 15px;
+  font-size: 13.5px; /* 字體微調同步縮小 */
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -133,19 +72,14 @@ margin-bottom: 20px;
   border-color: rgba(245, 158, 11, 0.4);
 }
 
-.itinerary-filter svg {
-  color: var(--vip-gold); /* 改為亮眼琥珀橘 #f59e0b */
-  flex-shrink: 0;
-}
-
 .itinerary-filter:focus-within {
-border-color: var(--vip-gold);
-background-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--vip-gold);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .itinerary-filter svg {
-color: var(--vip-gold);
-flex-shrink: 0;
+  color: var(--vip-gold);
+  flex-shrink: 0;
 }
 
 .itinerary-filter select {
@@ -154,16 +88,16 @@ flex-shrink: 0;
   background: transparent !important;
   color: #ffffff !important;
   outline: none !important;
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 600;
   height: 100%;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important; /* 箭頭也改為亮橘色 */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
   background-repeat: no-repeat !important;
   background-position: right 0 center !important;
-  padding-right: 24px;
+  padding-right: 20px;
 }
 
 .itinerary-filter select option {
@@ -171,72 +105,322 @@ flex-shrink: 0;
   color: #ffffff;
 }
 
-/* 1. 全域/桌機版設定（如果原本沒有這段，請直接補上） */
-.itinerary-feedback {
-  display: flex;
-  flex-direction: column-reverse; /* 確保輸入框在下，AI 回覆在上方 */
-  
-  /* 🚀 核心修改：加大這裡的數值，就可以完美增加兩個區塊中間的留白 */
-  gap: 24px; 
+/* ==========================================================================
+   🚀 奢華橫式卡片排版、分類靠右與文字微調樣式
+   ========================================================================== */
+.timeline {
+  padding: 0 16px 0 31px;
 }
 
+.timeline-row {
+  position: relative;
+  padding-bottom: 16px;
+}
+/* 🎯 修正：讓橘色圈圈 (timeline-dot) 精準定位在左側線條上 */
+.timeline-dot {
+  position: absolute;
+  left: -24px; /* 🚀 相對擴展回左側線條的精確交點 (40px 留白扣除置中位移) */
+  top: 50%;    /* 🚀 置於橫式卡片的正垂直中央 */
+  transform: translateY(-50%); /* 完美的垂直居中對齊 */
+  width: 10px;
+  height: 10px;
+  background-color: var(--vip-gold); /* 您的專屬亮眼琥珀橘 */
+  border: 2px solid #ffffff; /* 加上白色外圈，讓與線條交會時更精緻 */
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); /* 淡淡的橘色光暈奢華感 */
+  z-index: 3;
+}
 
-/* 新增：圖片 */
-.timeline-card-image {
+.timeline-card.luxury-horizontal {
+  display: flex;
+  flex-direction: row; /* 強制橫向排列 */
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  background: #ffffff;
+  border-radius: 16px;
+  gap: 0;
+  cursor: pointer; /* 點擊整張卡片皆可觸發彈窗詳情 */
+  box-shadow: var(--vip-card-shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.timeline-card.luxury-horizontal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(17, 24, 39, 0.06);
+}
+
+/* 橫式圖片外框 */
+.timeline-card-img-wrap {
+  width: 28%;
+  min-width: 120px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.timeline-card-img-wrap .timeline-card-image {
   width: 100%;
-  aspect-ratio: 3 / 2;
+  height: 100%;
   object-fit: cover;
-  display: block;
-  border-radius: 14px;
-  margin-bottom: 18px;
+  margin-bottom: 0 !important;
+  border-radius: 16px 0 0 16px;
+  transition: transform 0.3s ease;
+}
+
+/* 圖片懸浮奢華效果 */
+.img-hover-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(11, 15, 25, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.timeline-card.luxury-horizontal:hover .timeline-card-image {
+  transform: scale(1.05);
+}
+
+.timeline-card.luxury-horizontal:hover .img-hover-overlay {
+  opacity: 1;
+}
+
+/* 右側內文描述區域 */
+.timeline-card-body {
+  flex: 1;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card-body-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.time-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--vip-text-main);
+  background: var(--vip-light-bg);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+/* 🚀 1. 分類文字縮小且靠右對齊 */
+.preference-tag.alignment-right {
+  font-size: 10.5px; /* 字體縮小 */
+  font-weight: 700;
+  color: var(--vip-gold);
+  background: rgba(245, 158, 11, 0.08);
+  padding: 2px 7px;
+  border-radius: 5px;
+  margin-left: auto; /* 核心技巧：將元素推至最右側 */
+}
+
+.timeline-card-body h3 {
+  font-size: 14.5px; /* 標題微調 */
+  font-weight: 700;
+  color: var(--vip-dark);
+  margin: 0 0 4px 0;
+}
+
+/* 🚀 2. 內文文字縮小與截斷（防止拉得太長） */
+.line-truncated-content.text-muted-small {
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* 預設限制最多顯示 2 行 */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #6b7280;
+  font-size: 12.5px; /* 縮小內文字體 */
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ==========================================================================
+   🌌 3. 頂級行程詳情彈窗介面 (Luxury Detail Modal)
+   ========================================================================== */
+.luxury-lightbox-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(11, 15, 25, 0.75);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.luxury-detail-modal {
+  position: relative;
+  background: #ffffff;
+  width: 100%;
+  max-width: 520px; /* 精緻黃金比例寬度 */
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  animation: modalSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.modal-hero-img-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
   background: #f3f4f6;
 }
 
+.modal-hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 
-/* 行動裝置極致適配 */
-@media (max-width: 768px) {
-  .itinerary-feedback {
-    padding: 10px 10px calc(6px + env(safe-area-inset-bottom, 6px));
-  }
-  
+.modal-detail-body {
+  padding: 24px;
+}
 
-  .itinerary-page {
-    padding-bottom: 100px !important;
-  }
-
-  .itinerary-hero {
-    padding: 20px 20px;
-    border-radius: 18px;
-    margin-bottom: 20px;
-  }
-
-  .itinerary-hero h2 {
-    font-size: 24px;
-  }
-
-  .itinerary-filters {
+.modal-meta-row {
   display: flex;
-  flex-direction: column;
   gap: 10px;
-  }
+  margin-bottom: 12px;
+}
 
-.itinerary-filter {
+.modal-meta-badge {
   display: flex;
   align-items: center;
-  gap: 20px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0 16px;
-  height: 38px; /* 完美契合截圖 196601.jpg 的精緻比例 */
-  border-radius: 19px; /* 高度一半，維持完美半圓膠囊 */
-  color: #e5e7eb;
-  font-size: 14px;
-  font-weight: 600;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.modal-meta-badge.time {
+  background: #f3f4f6;
+  color: var(--vip-dark);
+}
+
+.modal-meta-badge.pref {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--vip-gold-dark);
+}
+
+.luxury-detail-modal h2 {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--vip-dark);
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.modal-full-content {
+  max-height: 200px;
+  overflow-y: auto; /* 內文過長時允許滾動 */
+  padding-right: 4px;
+}
+
+.modal-full-content p {
+  font-size: 13.5px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-line; /* 支援後端換行格式 */
+}
+
+/* 關閉按鈕 */
+.lightbox-close-btn {
+  position: absolute;
+  top: 16px; right: 16px;
+  background: rgba(11, 15, 25, 0.6);
+  backdrop-filter: blur(4px);
+  border: none;
+  color: #ffffff;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+}
+
+.lightbox-close-btn:hover {
+  background: #ef4444;
+  transform: rotate(90deg);
+}
+
+/* ==========================================================================
+   🎙️ 底部控制台與智慧輸入框
+   ========================================================================== */
+.itinerary-feedback {
+  display: flex;
+  flex-direction: column-reverse; /* 輸入框在下，AI 回覆在上方 */
+  gap: 20px;
+  padding: 16px;
+}
+
+.feedback-input-wrap {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--vip-border);
+  border-radius: 30px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.feedback-input-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 8px;
+  font-size: 14px;
+}
+
+/* 錄音中 placeholder 紅字閃爍 */
+.feedback-input-wrap input.listening-placeholder::placeholder {
+  color: #ef4444;
+  font-weight: 600;
+  animation: pulseListen 1.5s infinite alternate;
+}
+
+/* 麥克風錄音按鈕 */
+.mic-button {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s ease;
 }
 
-/* 6. 🎯 重新設計的 AI 回覆卡片區塊 */
+.mic-button:hover {
+  color: var(--vip-text-main);
+  background-color: #f3f4f6;
+}
+
+.mic-button.recording {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  animation: pulseRecordCircle 1.2s infinite alternate;
+}
+
+/* ==========================================================================
+   🎯 重新設計的 AI 回覆卡片區塊 
+   ========================================================================== */
 .ai-response-area {
   background: #ffffff;
   border-radius: 20px;
@@ -272,46 +456,103 @@ flex-shrink: 0;
   letter-spacing: 0.3px;
 }
 
-/* 按鈕群組排版 */
-.ai-action-group {
+/* AI Loading 三點跳動及旋轉動畫 */
+.ai-thinking-dots {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 6px;
+  align-items: center;
+  gap: 6px;
+  color: var(--vip-text-muted);
+  font-size: 14px;
 }
 
-.ai-btn-apply {
-  background-color: var(--vip-dark);
-  color: #ffffff;
-  border: none;
-  font-size: 13px;
-  font-weight: 700;
-  padding: 8px 16px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.ai-btn-apply:hover {
+.ai-thinking-dots .dot {
+  width: 6px;
+  height: 6px;
   background-color: var(--vip-gold);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+  border-radius: 50%;
+  display: inline-block;
+  animation: aiWave 1.4s infinite ease-in-out both;
 }
 
-.ai-btn-revert {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  font-size: 13px;
-  font-weight: 700;
-  padding: 8px 16px;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.ai-thinking-dots .dot:nth-child(1) { animation-delay: -0.32s; }
+.ai-thinking-dots .dot:nth-child(2) { animation-delay: -0.16s; }
+
+.thinking-text {
+  margin-left: 4px;
+  color: var(--vip-text-muted);
 }
 
-.ai-btn-revert:hover {
-  background-color: #e2e8f0;
-  color: #0f172a;
+.ai-spin {
+  animation: spin 2s linear infinite;
 }
 
+/* ==========================================================================
+   RWD 響應式：行動裝置快適適配
+   ========================================================================== */
+@media (max-width: 768px) {
+  .itinerary-feedback {
+    padding: 10px 10px calc(6px + env(safe-area-inset-bottom, 6px));
+  }
+
+  .timeline-card-img-wrap {
+    width: 95px;
+    min-width: 95px;
+  }
+
+  .timeline-card-body {
+    padding: 10px 12px;
+  }
+
+  .timeline-card-body h3 {
+    font-size: 13.5px;
+  }
+
+  .preference-tag.alignment-right {
+    font-size: 9.5px;
+    padding: 1px 5px;
+  }
+
+  .line-truncated-content.text-muted-small {
+    -webkit-line-clamp: 2; /* 手機端嚴格維持 2 行避免撐長 */
+  }
+
+  .luxury-detail-modal {
+    max-width: 95%;
+  }
+
+  .modal-detail-body {
+    padding: 18px;
+  }
+}
+
+/* ==========================================================================
+   動畫關鍵影格 (Keyframes)
+   ========================================================================== */
+@keyframes aiWave {
+  0%, 100% { transform: translateY(0); opacity: 0.3; }
+  50% { transform: translateY(-6px); opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseListen {
+  from { opacity: 0.6; } to { opacity: 1; }
+}
+
+@keyframes pulseRecordCircle {
+  from { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  to { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalSlideUp { 
+  from { transform: translateY(30px); opacity: 0; } 
+  to { transform: translateY(0); opacity: 1; } 
+}
+@keyframes slideUp {
+  from { transform: translateY(15px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
