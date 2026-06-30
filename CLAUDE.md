@@ -93,7 +93,6 @@ Current API files and their backend endpoints:
 | `authApi.ts` | `vipMagicLogin` | `/api/auth/vip-login` | POST |
 | `assistantApi.ts` | `sendMsg` | `/api/assistant/send-msg` | POST |
 | `assistantApi.ts` | `speechToText` | `/api/assistant/speech-to-text` | POST |
-| `assistantApi.ts` | `textToSpeech` | `/api/assistant/text-to-speech` | POST |
 | `itineraryApi.ts` | `getExclusiveItinerary` | `/api/itinerary/exclusive-itinerary` | GET |
 | `itineraryApi.ts` | `submitFeedback` | `/api/itinerary/feedback` | POST |
 

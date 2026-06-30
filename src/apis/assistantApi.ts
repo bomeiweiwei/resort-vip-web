@@ -46,21 +46,3 @@ export const speechToText = async (
 
   return response.data;
 };
-
-export const textToSpeech = async (
-  text: string,
-  language: AssistantResponse["language"] = "zh-TW"
-): Promise<Blob> => {
-  const response = await apiClient.post(
-    "/api/assistant/text-to-speech",
-    {
-      text,
-      language,
-    },
-    {
-      responseType: "blob",
-    }
-  );
-
-  return response.data;
-};

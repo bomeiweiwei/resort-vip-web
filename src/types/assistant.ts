@@ -15,4 +15,5 @@ export type AssistantResponse = {
   reply: string;
   speech_reply?: string;
   language?: "zh-TW" | "en-US" | "ja-JP" | "ko-KR";
+  audio_base64?: string;
 };
