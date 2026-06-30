@@ -186,31 +186,71 @@ function AssistantPage() {
   };
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const unlockAudioUrlRef = useRef<string | null>(null);
+
+  // 手機瀏覽器（iOS Safari / mobile Chrome）的自動播放限制：
+  // <audio>.play() 必須在使用者手勢的同步呼叫堆疊內觸發才會被允許。
+  // 錄音流程在拿到語音回覆前會經過好幾個 await（speechToText、textToSpeech），
+  // 等到真正要播放時，手勢已經過期，導致桌機可播放、手機卻無聲。
+  // 解法：在按下「停止錄音」當下（同步、尚未 await）就先播放同一個 <audio>
+  // 元素一次（靜音的極短音檔），把這個元素標記為「使用者已允許播放」，
+  // 之後在非同步流程中重複使用同一個元素設定真正的語音來源即可正常播放。
+  const unlockAudioPlayback = () => {
+    let audio = audioRef.current;
+    if (!audio) {
+      audio = new Audio();
+      audioRef.current = audio;
+    }
+
+    if (!unlockAudioUrlRef.current) {
+      unlockAudioUrlRef.current = URL.createObjectURL(encodeWav(new Float32Array(1), 8000));
+    }
+
+    if (!audio.src) {
+      audio.src = unlockAudioUrlRef.current;
+    }
+
+    const wasMuted = audio.muted;
+    audio.muted = true;
+
+    audio
+      .play()
+      .then(() => {
+        audio!.pause();
+        audio!.currentTime = 0;
+        audio!.muted = wasMuted;
+      })
+      .catch(() => {
+        audio!.muted = wasMuted;
+      });
+  };
 
   const playTextToSpeech = async (
     text: string,
     language: AssistantResponse["language"] = currentLang === "zh" ? "zh-TW" : "en-US"
   ) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-
     const audioBlob = await textToSpeech(text, language);
 
     const audioUrl = URL.createObjectURL(audioBlob);
 
-    const audio = new Audio(audioUrl);
+    // 重複使用 unlockAudioPlayback() 已解鎖的同一個 <audio> 元素，
+    // 而不是 new 一個全新的元素，手機才會允許在這裡播放。
+    const audio = audioRef.current ?? new Audio();
     audioRef.current = audio;
+
+    audio.pause();
+    audio.muted = false;
+    audio.src = audioUrl;
 
     await new Promise<void>((resolve, reject) => {
 
         audio.onended = () => {
           URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
           resolve();
         };
 
         audio.onerror = (e) => {
           URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
           reject(e);
         };
 
@@ -219,11 +259,25 @@ function AssistantPage() {
     });
   };
 
+  // 離開頁面時停止語音播放並釋放暫存的 blob URL
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      if (unlockAudioUrlRef.current) {
+        URL.revokeObjectURL(unlockAudioUrlRef.current);
+      }
+    };
+  }, []);
+
   const recording = async () => {
     if (
         isSending ||
         isGeneratingSpeech
     ) return;
+
+    // 必須在這裡（使用者點擊的同步呼叫堆疊內）解鎖，才能讓手機瀏覽器
+    // 之後在 await 之後呼叫的 playTextToSpeech() 順利播放語音。
+    unlockAudioPlayback();
 
     if (!isRecording) {
       try {
