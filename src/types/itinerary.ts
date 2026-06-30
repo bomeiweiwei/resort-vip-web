@@ -20,4 +20,5 @@ export type ItineraryFeedbackRequest = {
 export type ItineraryFeedbackResponse = {
   success: boolean;
   message: string;
+  audio_base64: string | null;
 };
