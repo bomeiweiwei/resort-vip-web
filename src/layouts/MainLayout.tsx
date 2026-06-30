@@ -21,6 +21,10 @@ function MainLayout() {
   const titleObj = pageTitles[location.pathname] ?? { zh: "RESORT VIP", en: "RESORT VIP" };
   const currentTitle = titleObj[currentLang];
 
+  // const isFullContentPage =
+  //   location.pathname === "/guide/loading" ||
+  //   location.pathname === "/guide/result";
+
   return (
     <div className="app-shell">
       {/* 4. 將當前語系傳給 Sidebar */}

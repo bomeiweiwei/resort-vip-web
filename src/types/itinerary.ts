@@ -3,6 +3,7 @@ export type ItinerarySchedule = {
   title: string;
   content: string;
   preference: string;
+  imageUrl?: string;
 };
 
 export type ItineraryDateGroup = {
@@ -19,4 +20,5 @@ export type ItineraryFeedbackRequest = {
 export type ItineraryFeedbackResponse = {
   success: boolean;
   message: string;
+  audio_base64: string | null;
 };

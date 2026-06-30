@@ -11,6 +11,8 @@ import type { CustomerProfile } from "../types/auth";
 import axios from "axios";
 import type { AssistantResponse } from "../types/assistant";
 import "../styles/assistant.css"; // 引入獨立的 CSS 檔案
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 // 多國語言字典
 const uiText = {
@@ -65,6 +67,7 @@ function AssistantPage() {
   const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const chatListRef = useRef<HTMLDivElement | null>(null);
+  const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
 
   // 初始化歡迎訊息
   useEffect(() => {
@@ -182,22 +185,45 @@ function AssistantPage() {
     return result;
   };
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   const playTextToSpeech = async (
     text: string,
     language: AssistantResponse["language"] = currentLang === "zh" ? "zh-TW" : "en-US"
   ) => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+
     const audioBlob = await textToSpeech(text, language);
+
     const audioUrl = URL.createObjectURL(audioBlob);
+
     const audio = new Audio(audioUrl);
+    audioRef.current = audio;
 
-    audio.onended = () => URL.revokeObjectURL(audioUrl);
-    audio.onerror = () => URL.revokeObjectURL(audioUrl);
+    await new Promise<void>((resolve, reject) => {
 
-    await audio.play();
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+          resolve();
+        };
+
+        audio.onerror = (e) => {
+          URL.revokeObjectURL(audioUrl);
+          audioRef.current = null;
+          reject(e);
+        };
+
+        audio.play().catch(reject);
+
+    });
   };
 
   const recording = async () => {
-    if (isSending) return;
+    if (
+        isSending ||
+        isGeneratingSpeech
+    ) return;
 
     if (!isRecording) {
       try {
@@ -256,15 +282,40 @@ function AssistantPage() {
       setIsThinking(true);
 
       const result = await speechToText(wavBlob);
-      const userMessage: ChatMessage = { id: Date.now(), role: "user", text: result.text ?? "" };
+
+      const userText = result.text?.trim() || "語音輸入";
+      const replyText = result.reply?.trim() || uiText.voiceReceived[currentLang];
+      const speechText = result.speech_reply?.trim() || replyText;
+
+      const userMessage: ChatMessage = {
+        id: Date.now(),
+        role: "user",
+        text: userText,
+      };
+
       const assistantMessage: ChatMessage = {
         id: Date.now() + 1,
         role: "assistant",
-        text: result.reply ?? uiText.voiceReceived[currentLang],
+        text: replyText,
+        speech_text: speechText,
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      await playTextToSpeech(assistantMessage.text, result.language);
+
+      setIsThinking(false);
+      setIsSending(false);
+
+      if (speechText.trim()) {
+        setIsGeneratingSpeech(true);
+
+        playTextToSpeech(speechText, result.language)
+          .catch((error) => {
+            console.error("TTS 播放失敗:", error);
+          })
+          .finally(() => {
+            setIsGeneratingSpeech(false);
+          });
+      }
     } catch (error) {
       console.error("speechToText error:", error);
       
@@ -285,7 +336,11 @@ function AssistantPage() {
   };
 
   const sendMsg = async () => {
-    if (isSending || isRecording) return;
+    if (
+        isSending ||
+        isRecording ||
+        isGeneratingSpeech
+    ) return;
     const text = message.trim();
     if (!text) return;
 
@@ -337,7 +392,15 @@ function AssistantPage() {
 
         {messages.map((item) => (
           <div key={item.id} className={`chat-row ${item.role}`}>
-            <div className="chat-bubble">{item.text}</div>
+            <div className="chat-bubble">
+              {item.role === "assistant" ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {item.text}
+                </ReactMarkdown>
+              ) : (
+                item.text
+              )}
+            </div>
           </div>
         ))}
 
@@ -345,7 +408,7 @@ function AssistantPage() {
           <div className="chat-row assistant">
             <div className="chat-bubble thinking-bubble">
               {uiText.thinking[currentLang]}
-              <span className="thinking-dots">
+              <span className="thinking-assistant-dots">
                 <span className="dot"></span>
                 <span className="dot"></span>
                 <span className="dot"></span>
@@ -353,21 +416,26 @@ function AssistantPage() {
             </div>
           </div>
         )}
+        {isGeneratingSpeech && (
+          <div className="speech-generating">
+            🔊 語音產生中，請稍候...
+          </div>
+        )}
       </div> 
       {/* 聊天區塊結束 */}
 
       <div className="chat-input-area">
         <div className="quick-actions">
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.water[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.water[currentLang])}>
             {uiText.quickActions.water[currentLang]}
           </button>
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.spa[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.spa[currentLang])}>
             {uiText.quickActions.spa[currentLang]}
           </button>
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
             {uiText.quickActions.dinner[currentLang]}
           </button>
-          <button disabled={isSending || isRecording} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
+          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
             {uiText.quickActions.shuttle[currentLang]}
           </button>
         </div>
@@ -384,7 +452,7 @@ function AssistantPage() {
             type="button"
             className={`icon-button ${isRecording ? "recording" : ""}`}
             onClick={recording}
-            disabled={isSending}
+            disabled={isSending || isGeneratingSpeech}
             title={isRecording ? uiText.micStop[currentLang] : uiText.micStart[currentLang]}
           >
             <Mic size={20} />
@@ -394,7 +462,7 @@ function AssistantPage() {
             type="button"
             className="send-button"
             onClick={sendMsg}
-            disabled={isSending || isRecording}
+            disabled={isSending || isRecording || isGeneratingSpeech}
             title={uiText.send[currentLang]}
           >
             <Send size={20} />
