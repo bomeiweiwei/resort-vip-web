@@ -6,7 +6,7 @@ import "../styles/Itinerary.css";
 
 import type {
   ItineraryDateGroup,
-  ItineraryScheduleResponse
+  ItinerarySchedule
 } from "../types/itinerary";
 
 const uiText = {
@@ -44,7 +44,7 @@ function ItineraryPage() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   
   // 儲存當前點開看完整行程內容的物件
-  const [activeDetailItem, setActiveDetailItem] = useState<ItineraryScheduleResponse | null>(null);
+  const [activeDetailItem, setActiveDetailItem] = useState<ItinerarySchedule | null>(null);
 
   // 🚀 使用 useRef 追蹤 selectedDate 以防非同步 closure 讀到舊值
   const selectedDateRef = useRef(selectedDate);
@@ -102,7 +102,7 @@ function ItineraryPage() {
       }
 
       // 使用傳入的 targetDate 準確對接後端
-      const result = await submitFeedback(text, targetDate);
+      const result = await submitFeedback(text, targetDate, currentLang);
       
       if (result.success) {
         setAiStatus("responded");
