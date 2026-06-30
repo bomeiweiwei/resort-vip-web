@@ -122,11 +122,45 @@
   font-size: 16px;
 }
 
-.speech-generating {
-  font-size: 13px;
-  color: #64748b;
-  text-align: center;
-  padding: 6px 0;
+.audio-playback-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.playback-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: #f59e0b;
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.playback-toggle:hover {
+  background-color: #d97706;
+}
+
+.playback-track {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #e2e8f0;
+  overflow: hidden;
+}
+
+.playback-progress {
+  height: 100%;
+  background-color: #f59e0b;
+  border-radius: 2px;
+  transition: width 0.1s linear;
 }
 
 /* ========================================= */

@@ -1,15 +1,13 @@
 import { useEffect, useState, useRef } from "react";
-import { Mic, Send } from "lucide-react";
+import { Mic, Send, Play, Pause } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import {
   sendMsg as sendMsgApi,
   speechToText,
-  textToSpeech,
 } from "../apis/assistantApi";
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
 import axios from "axios";
-import type { AssistantResponse } from "../types/assistant";
 import "../styles/assistant.css"; // 引入獨立的 CSS 檔案
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -25,6 +23,8 @@ const uiText = {
   placeholder: { zh: "請輸入您的問題或需求...", en: "Type your question or request here..." },
   micStart: { zh: "開始錄音", en: "Start recording" },
   micStop: { zh: "停止錄音", en: "Stop recording" },
+  audioPlay: { zh: "播放語音", en: "Play voice" },
+  audioPause: { zh: "暫停語音", en: "Pause voice" },
   send: { zh: "傳送", en: "Send" },
   micError: { 
     zh: "無法啟用麥克風，請確認瀏覽器已允許麥克風權限後再試一次。", 
@@ -67,7 +67,10 @@ function AssistantPage() {
   const [isThinking, setIsThinking] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const chatListRef = useRef<HTMLDivElement | null>(null);
-  const [isGeneratingSpeech, setIsGeneratingSpeech] = useState(false);
+  const [playingMessageId, setPlayingMessageId] = useState<number | null>(null);
+  const [isAudioPaused, setIsAudioPaused] = useState(false);
+  const [playbackProgress, setPlaybackProgress] = useState(0); // 0-100
+  const isAudioPlaying = playingMessageId !== null && !isAudioPaused;
 
   // 初始化歡迎訊息
   useEffect(() => {
@@ -187,42 +190,66 @@ function AssistantPage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const playTextToSpeech = async (
-    text: string,
-    language: AssistantResponse["language"] = currentLang === "zh" ? "zh-TW" : "en-US"
-  ) => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+  const playAudio = (messageId: number, audioBase64: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
 
-    const audioBlob = await textToSpeech(text, language);
-
-    const audioUrl = URL.createObjectURL(audioBlob);
-
-    const audio = new Audio(audioUrl);
+    const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
     audioRef.current = audio;
+    setPlayingMessageId(messageId);
+    setIsAudioPaused(false);
+    setPlaybackProgress(0);
 
-    await new Promise<void>((resolve, reject) => {
+    audio.ontimeupdate = () => {
+      if (audio.duration) {
+        setPlaybackProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
 
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
-          resolve();
-        };
+    audio.onended = () => {
+      audioRef.current = null;
+      setPlayingMessageId(null);
+      setIsAudioPaused(false);
+      setPlaybackProgress(0);
+    };
 
-        audio.onerror = (e) => {
-          URL.revokeObjectURL(audioUrl);
-          audioRef.current = null;
-          reject(e);
-        };
+    audio.onerror = (e) => {
+      console.error("TTS 播放失敗:", e);
+      audioRef.current = null;
+      setPlayingMessageId(null);
+      setIsAudioPaused(false);
+      setPlaybackProgress(0);
+    };
 
-        audio.play().catch(reject);
-
+    audio.play().catch((error) => {
+      console.error("TTS 播放失敗:", error);
+      audioRef.current = null;
+      setPlayingMessageId(null);
+      setIsAudioPaused(false);
     });
+  };
+
+  const togglePlayPause = (messageId: number, audioBase64: string) => {
+    if (playingMessageId === messageId && audioRef.current) {
+      if (isAudioPaused) {
+        audioRef.current.play();
+        setIsAudioPaused(false);
+      } else {
+        audioRef.current.pause();
+        setIsAudioPaused(true);
+      }
+      return;
+    }
+
+    playAudio(messageId, audioBase64);
   };
 
   const recording = async () => {
     if (
         isSending ||
-        isGeneratingSpeech
+        isAudioPlaying
     ) return;
 
     if (!isRecording) {
@@ -298,6 +325,7 @@ function AssistantPage() {
         role: "assistant",
         text: replyText,
         speech_text: speechText,
+        audioBase64: result.audio_base64,
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
@@ -305,16 +333,8 @@ function AssistantPage() {
       setIsThinking(false);
       setIsSending(false);
 
-      if (speechText.trim()) {
-        setIsGeneratingSpeech(true);
-
-        playTextToSpeech(speechText, result.language)
-          .catch((error) => {
-            console.error("TTS 播放失敗:", error);
-          })
-          .finally(() => {
-            setIsGeneratingSpeech(false);
-          });
+      if (result.audio_base64) {
+        playAudio(assistantMessage.id, result.audio_base64);
       }
     } catch (error) {
       console.error("speechToText error:", error);
@@ -339,7 +359,7 @@ function AssistantPage() {
     if (
         isSending ||
         isRecording ||
-        isGeneratingSpeech
+        isAudioPlaying
     ) return;
     const text = message.trim();
     if (!text) return;
@@ -400,6 +420,35 @@ function AssistantPage() {
               ) : (
                 item.text
               )}
+
+              {item.role === "assistant" && item.audioBase64 && (
+                <div className="audio-playback-bar">
+                  <button
+                    type="button"
+                    className="playback-toggle"
+                    onClick={() => togglePlayPause(item.id, item.audioBase64!)}
+                    title={
+                      playingMessageId === item.id && !isAudioPaused
+                        ? uiText.audioPause[currentLang]
+                        : uiText.audioPlay[currentLang]
+                    }
+                  >
+                    {playingMessageId === item.id && !isAudioPaused ? (
+                      <Pause size={14} />
+                    ) : (
+                      <Play size={14} />
+                    )}
+                  </button>
+                  <div className="playback-track">
+                    <div
+                      className="playback-progress"
+                      style={{
+                        width: `${playingMessageId === item.id ? playbackProgress : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -416,26 +465,21 @@ function AssistantPage() {
             </div>
           </div>
         )}
-        {isGeneratingSpeech && (
-          <div className="speech-generating">
-            🔊 語音產生中，請稍候...
-          </div>
-        )}
-      </div> 
+      </div>
       {/* 聊天區塊結束 */}
 
       <div className="chat-input-area">
         <div className="quick-actions">
-          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.water[currentLang])}>
+          <button disabled={isSending || isRecording || isAudioPlaying} onClick={() => setMessage(uiText.quickActions.water[currentLang])}>
             {uiText.quickActions.water[currentLang]}
           </button>
-          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.spa[currentLang])}>
+          <button disabled={isSending || isRecording || isAudioPlaying} onClick={() => setMessage(uiText.quickActions.spa[currentLang])}>
             {uiText.quickActions.spa[currentLang]}
           </button>
-          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
+          <button disabled={isSending || isRecording || isAudioPlaying} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
             {uiText.quickActions.dinner[currentLang]}
           </button>
-          <button disabled={isSending || isRecording || isGeneratingSpeech} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
+          <button disabled={isSending || isRecording || isAudioPlaying} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
             {uiText.quickActions.shuttle[currentLang]}
           </button>
         </div>
@@ -452,7 +496,7 @@ function AssistantPage() {
             type="button"
             className={`icon-button ${isRecording ? "recording" : ""}`}
             onClick={recording}
-            disabled={isSending || isGeneratingSpeech}
+            disabled={isSending || isAudioPlaying}
             title={isRecording ? uiText.micStop[currentLang] : uiText.micStart[currentLang]}
           >
             <Mic size={20} />
@@ -462,7 +506,7 @@ function AssistantPage() {
             type="button"
             className="send-button"
             onClick={sendMsg}
-            disabled={isSending || isRecording || isGeneratingSpeech}
+            disabled={isSending || isRecording || isAudioPlaying}
             title={uiText.send[currentLang]}
           >
             <Send size={20} />

@@ -3,4 +3,5 @@ export type ChatMessage = {
   role: "user" | "assistant";
   text: string;
   speech_text?: string;
+  audioBase64?: string;
 };

@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import { MapPin, Mic, Pause, Play, Send, Square, AlertCircle } from "lucide-react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 // 🎯 匯入統一管理的 API 函數 (指向相對路徑 src/apis/guideApi.ts)
-import { analyzeGuideInput, synthesizeGuideSpeech } from "../apis/guideApi";
+import { analyzeGuideInput } from "../apis/guideApi";
 import "../styles/guide.css";
 
 type ChatMessage = {
@@ -23,66 +23,7 @@ type GuideAnalysisResult = {
   imageUrl?: string;
   user_text?: string;
   responseLanguage?: string;
-};
-
-const normalizeGuideLanguage = (language?: string): string => {
-  const value = (language || "").toLowerCase();
-
-  if (value.startsWith("en")) return "en-US";
-  if (value.startsWith("ja")) return "ja-JP";
-  if (value.startsWith("ko")) return "ko-KR";
-  if (value.startsWith("zh")) return "zh-TW";
-
-  return "zh-TW";
-};
-
-const detectLanguageFromText = (text?: string, fallback = "zh-TW"): string => {
-  const value = (text || "").trim();
-
-  if (!value) return normalizeGuideLanguage(fallback);
-  if (/[\u3040-\u30ff]/.test(value)) return "ja-JP";
-  if (/[\uac00-\ud7af]/.test(value)) return "ko-KR";
-  if (/[\u4e00-\u9fff]/.test(value)) return "zh-TW";
-  if (/[A-Za-z]/.test(value)) return "en-US";
-
-  return normalizeGuideLanguage(fallback);
-};
-
-/**
- * 給 TTS 使用的前端保險處理。
- * 正常情況應該使用後端回傳的 guideMessageText。
- * 這個函式是避免 mock 或舊版後端只回傳 guideMessage 時，TTS 念出 Markdown 符號。
- */
-const markdownToSpeechText = (text?: string): string => {
-  return (text || "")
-    // 移除圖片 Markdown：![alt](url)
-    .replace(/!\[[^\]]*]\([^)]+\)/g, "")
-    // 連結 Markdown：[文字](url) -> 文字
-    .replace(/\[([^\]]+)]\([^)]+\)/g, "$1")
-    // 移除粗體、斜體、刪除線、inline code、標題、引用符號
-    .replace(/[*_~`>#]/g, "")
-    // 移除 unordered list 前綴
-    .replace(/^\s*[-+]\s+/gm, "")
-    // 移除 ordered list 前綴
-    .replace(/^\s*\d+\.\s+/gm, "")
-    // 移除 Markdown 分隔線
-    .replace(/^\s*-{3,}\s*$/gm, "")
-    // 壓縮過多空行
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-};
-
-const getGuideSpeechText = (result?: {
-  guideMessage?: string;
-  guideMessageText?: string;
-}): string => {
-  const plainText = (result?.guideMessageText || "").trim();
-
-  if (plainText) {
-    return plainText;
-  }
-
-  return markdownToSpeechText(result?.guideMessage);
+  audio_base64?: string;
 };
 
 const getSupportedAudioMimeType = (): string => {
@@ -276,13 +217,6 @@ export default function GuideResultPage() {
 
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
   const chatAudioRef = useRef<HTMLAudioElement | null>(null);
-  const mainAudioObjectUrlRef = useRef<string | null>(null);
-  const chatAudioObjectUrlRef = useRef<string | null>(null);
-
-  // 避免 React 18 StrictMode 在開發環境重複觸發 TTS，造成兩段語音同時播放。
-  const mainTtsKeyRef = useRef<string | null>(null);
-  const mainTtsPromiseRef = useRef<Promise<Blob> | null>(null);
-  const mainTtsRequestIdRef = useRef(0);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -313,93 +247,32 @@ export default function GuideResultPage() {
 
     setMessages([{ id: 1, role: "assistant", text: backendResult.guideMessage }]);
 
-    const speechText = getGuideSpeechText(backendResult);
+    if (mainAudioRef.current) {
+      mainAudioRef.current.pause();
+      mainAudioRef.current.onplay = null;
+      mainAudioRef.current.onpause = null;
+      mainAudioRef.current.onended = null;
+      mainAudioRef.current.src = "";
+      mainAudioRef.current = null;
+    }
+    setIsPlaying(false);
 
-    const speechLanguage = backendResult.responseLanguage
-      ? normalizeGuideLanguage(backendResult.responseLanguage)
-      : detectLanguageFromText(
-          speechText,
-          currentLang === "en" ? "en-US" : "zh-TW"
-        );
+    if (backendResult.audio_base64) {
+      const audio = new Audio(`data:audio/mp3;base64,${backendResult.audio_base64}`);
+      mainAudioRef.current = audio;
 
-    const ttsKey = `${speechText}::${speechLanguage}`;
-    let isCancelled = false;
-    const requestId = ++mainTtsRequestIdRef.current;
+      audio.onplay = () => setIsPlaying(true);
+      audio.onpause = () => setIsPlaying(false);
+      audio.onended = () => setIsPlaying(false);
 
-    const releaseMainAudio = () => {
-      if (mainAudioRef.current) {
-        mainAudioRef.current.pause();
-        mainAudioRef.current.onplay = null;
-        mainAudioRef.current.onpause = null;
-        mainAudioRef.current.onended = null;
-        mainAudioRef.current.src = "";
-        mainAudioRef.current = null;
-      }
-
-      if (mainAudioObjectUrlRef.current) {
-        URL.revokeObjectURL(mainAudioObjectUrlRef.current);
-        mainAudioObjectUrlRef.current = null;
-      }
-
-      setIsPlaying(false);
-    };
-
-    const prepareGuideSpeech = async () => {
-      try {
-        if (!speechText) return;
-
-        // 同一段導覽文字 + 同一語系，只建立一個 TTS 請求。
-        // React 18 StrictMode 在 dev 會讓 useEffect 跑兩次，這裡可以避免產生兩個 audio。
-        if (mainTtsKeyRef.current !== ttsKey || !mainTtsPromiseRef.current) {
-          releaseMainAudio();
-          mainTtsKeyRef.current = ttsKey;
-          mainTtsPromiseRef.current = synthesizeGuideSpeech({
-            text: speechText,
-            language: speechLanguage,
-          });
-        }
-
-        const audioBlob = await mainTtsPromiseRef.current;
-
-        // 如果這次 effect 已經被清理，或有更新的 TTS 請求，就不要建立 audio。
-        if (isCancelled || requestId !== mainTtsRequestIdRef.current) return;
-
-        releaseMainAudio();
-
-        const audioObjectUrl = URL.createObjectURL(audioBlob);
-        mainAudioObjectUrlRef.current = audioObjectUrl;
-
-        const audio = new Audio(audioObjectUrl);
-        audio.playbackRate = 1.15;
-        mainAudioRef.current = audio;
-
-        audio.onplay = () => setIsPlaying(true);
-        audio.onpause = () => setIsPlaying(false);
-        audio.onended = () => setIsPlaying(false);
-
-        // 不自動播放。只準備語音，讓使用者按播放按鈕。
-        // 這樣可以避免 StrictMode 或瀏覽器自動播放造成「多一段不能暫停的語音」。
-        setIsPlaying(false);
-      } catch (error) {
-        if (isCancelled) return;
-        console.error("Guide TTS failed:", error);
-        setErrorToast("語音導覽產生失敗，請稍後再試。");
-      }
-    };
-
-    prepareGuideSpeech();
+      // 不自動播放。只準備語音，讓使用者按播放按鈕。
+    }
 
     return () => {
-      isCancelled = true;
       mainAudioRef.current?.pause();
       chatAudioRef.current?.pause();
-
-      if (chatAudioObjectUrlRef.current) {
-        URL.revokeObjectURL(chatAudioObjectUrlRef.current);
-        chatAudioObjectUrlRef.current = null;
-      }
     };
-  }, [backendResult, navigate, currentLang]);
+  }, [backendResult, navigate]);
 
   // 智慧滾動對策：Web 滾動內層，Mobile 滾動視窗
   useEffect(() => {
@@ -410,45 +283,19 @@ export default function GuideResultPage() {
     }
   }, [messages]);
 
-  const playChatSpeech = async (text: string, language?: string) => {
-    const speechText = markdownToSpeechText(text);
+  const playChatSpeech = (audioBase64?: string) => {
+    if (!audioBase64) return;
 
-    if (!speechText.trim()) return;
+    chatAudioRef.current?.pause();
 
-    try {
-      chatAudioRef.current?.pause();
-
-      if (mainAudioRef.current && !mainAudioRef.current.paused) {
-        mainAudioRef.current.pause();
-      }
-
-      if (chatAudioObjectUrlRef.current) {
-        URL.revokeObjectURL(chatAudioObjectUrlRef.current);
-        chatAudioObjectUrlRef.current = null;
-      }
-
-      const audioBlob = await synthesizeGuideSpeech({
-        text: speechText,
-        language: language
-          ? normalizeGuideLanguage(language)
-          : detectLanguageFromText(
-              speechText,
-              currentLang === "en" ? "en-US" : "zh-TW"
-            ),
-      });
-
-      const audioObjectUrl = URL.createObjectURL(audioBlob);
-      chatAudioObjectUrlRef.current = audioObjectUrl;
-
-      const nextAudio = new Audio(audioObjectUrl);
-      nextAudio.playbackRate = 1.15;
-      chatAudioRef.current = nextAudio;
-
-      nextAudio.play().catch((e) => console.log("Chat audio play failed:", e));
-    } catch (error) {
-      console.error("Guide chat TTS failed:", error);
-      setErrorToast("語音導覽產生失敗，請稍後再試。");
+    if (mainAudioRef.current && !mainAudioRef.current.paused) {
+      mainAudioRef.current.pause();
     }
+
+    const nextAudio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
+    chatAudioRef.current = nextAudio;
+
+    nextAudio.play().catch((e) => console.log("Chat audio play failed:", e));
   };
 
   // 🎯 播放 / 暫停導遊 TTS 語音
@@ -503,15 +350,7 @@ export default function GuideResultPage() {
         },
       ]);
 
-      const speechText = getGuideSpeechText(data);
-      const speechLanguage =
-        data.responseLanguage ||
-        detectLanguageFromText(
-          speechText || text,
-          currentLang === "en" ? "en-US" : "zh-TW"
-        );
-
-      await playChatSpeech(speechText, speechLanguage);
+      playChatSpeech(data.audio_base64);
     } catch (err: any) {
       console.error("Send message error:", err);
       const backendErrorMsg = err.response?.data?.detail;
@@ -601,15 +440,7 @@ export default function GuideResultPage() {
               })
           );
 
-          const speechText = getGuideSpeechText(data);
-          const speechLanguage =
-            data.responseLanguage ||
-            detectLanguageFromText(
-              speechText || data.user_text || "",
-              currentLang === "en" ? "en-US" : "zh-TW"
-            );
-
-          await playChatSpeech(speechText, speechLanguage);
+          playChatSpeech(data.audio_base64);
         } catch (err: any) {
           console.error(err);
           const backendErrorMsg = err.response?.data?.detail;
