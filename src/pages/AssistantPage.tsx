@@ -4,12 +4,10 @@ import { useOutletContext } from "react-router-dom";
 import {
   sendMsg as sendMsgApi,
   speechToText,
-  textToSpeech,
 } from "../apis/assistantApi";
 import type { ChatMessage } from "../types/chat_message";
 import type { CustomerProfile } from "../types/auth";
 import axios from "axios";
-import type { AssistantResponse } from "../types/assistant";
 import "../styles/assistant.css"; // 引入獨立的 CSS 檔案
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -187,15 +185,10 @@ function AssistantPage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const playTextToSpeech = async (
-    text: string,
-    language: AssistantResponse["language"] = currentLang === "zh" ? "zh-TW" : "en-US"
-  ) => {
+  const playTextToSpeech = async (audioBase64: string) => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
 
-    const audioBlob = await textToSpeech(text, language);
-
-    const audioUrl = URL.createObjectURL(audioBlob);
+    const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
 
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
@@ -203,13 +196,11 @@ function AssistantPage() {
     await new Promise<void>((resolve, reject) => {
 
         audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
           audioRef.current = null;
           resolve();
         };
 
         audio.onerror = (e) => {
-          URL.revokeObjectURL(audioUrl);
           audioRef.current = null;
           reject(e);
         };
@@ -305,10 +296,10 @@ function AssistantPage() {
       setIsThinking(false);
       setIsSending(false);
 
-      if (speechText.trim()) {
+      if (result.audio_base64) {
         setIsGeneratingSpeech(true);
 
-        playTextToSpeech(speechText, result.language)
+        playTextToSpeech(result.audio_base64)
           .catch((error) => {
             console.error("TTS 播放失敗:", error);
           })
@@ -418,7 +409,7 @@ function AssistantPage() {
         )}
         {isGeneratingSpeech && (
           <div className="speech-generating">
-            🔊 語音產生中，請稍候...
+            🔊 語音播放中...
           </div>
         )}
       </div> 
