@@ -360,7 +360,7 @@ function ItineraryPage() {
     }
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
+  const handlePointerDown = (_e: React.PointerEvent) => {
     isLongPressed.current = false;
     
     if (currentLang === "en") {
@@ -377,7 +377,7 @@ function ItineraryPage() {
     }
   };
 
-  const handlePointerUpOrLeave = (e: React.PointerEvent) => {
+  const handlePointerUpOrLeave = (_e: React.PointerEvent) => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
     }
@@ -422,7 +422,7 @@ function ItineraryPage() {
               <div className="timeline-card-img-wrap">
                 <img
                   className="timeline-card-image"
-                  src={getStaticUrl(item.imageUrl || item.image_url)}
+                  src={getStaticUrl(item.imageUrl)}
                   alt={item.title}
                 />
                 <div className="img-hover-overlay">
@@ -578,7 +578,7 @@ function ItineraryPage() {
             </button>
             
             <div className="modal-hero-img-wrap">
-              <img src={getStaticUrl(activeDetailItem.imageUrl || activeDetailItem.image_url)} alt={activeDetailItem.title} className="modal-hero-image" />
+              <img src={getStaticUrl(activeDetailItem.imageUrl)} alt={activeDetailItem.title} className="modal-hero-image" />
             </div>
 
             <div className="modal-detail-body">
