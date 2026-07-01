@@ -8,7 +8,11 @@ import "../styles/guide.css";
 const translations = {
   analyzing: { zh: "辨識分析景點資訊...", en: "Identifying attraction info..." },
   noData: { zh: "未接收到任何請求內容，請重新嘗試。", en: "No data received. Please try again." },
-  failed: { zh: "景點辨識分析失敗，請重新嘗試。", en: "Attraction analysis failed. Please try again." }
+  // 🎯 統一的中英雙語「查無景點」精緻提醒
+  failed: { 
+    zh: "系統未辨識到相符的景點，請換個角度拍照或重新輸入試試。", 
+    en: "No matching attraction found. Please take another photo from a different angle or try typing again." 
+  }
 };
 
 export default function GuideLoadingPage() {
@@ -48,8 +52,9 @@ export default function GuideLoadingPage() {
 
     // 防呆：如果沒有任何輸入源，退回導遊首頁
     if (!file && !textQuery && !voiceBlob) {
-      alert(translations.noData[currentLang]);
-      navigate("/guide");
+      navigate("/guide", {
+        state: { errorMsg: translations.noData }
+      });
       return;
     }
 
@@ -63,11 +68,27 @@ export default function GuideLoadingPage() {
           language: currentLang
         });
 
-        // 成功拿到後端 analysis 結果後，帶著資料前往結果頁 (GuideResultPage)
+        // 🎯 核心攔截：如果 API 回傳成功，但 success 欄位為 false，或是根本沒有導遊回覆文字 (guideMessage)
+        // 這代表 AI 在綠舞渡假村資料庫中查無此景點
+        if (result && (result.success === false || !result.guideMessage)) {
+          navigate("/guide", { 
+            state: { 
+              errorMsg: translations.failed // 🎯 傳遞雙語錯誤物件，回退至首頁顯示
+            } 
+          });
+          return;
+        }
+
+        // 成功辨識到景點，帶著完整資料前往結果頁 (GuideResultPage)
         navigate("/guide/result", { state: { analysisResult: result } });
       } catch (error: any) {
         console.error("Analysis failed:", error);
-        navigate("/guide");
+        // 🎯 網路或後端異常時，一律帶回首頁並彈出雙語錯誤提醒
+        navigate("/guide", { 
+          state: { 
+            errorMsg: translations.failed 
+          } 
+        });
       }
     };
 

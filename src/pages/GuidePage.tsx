@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Camera, Image as ImageIcon, Mic, Send, Square } from "lucide-react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { Camera, Image as ImageIcon, Mic, Send, Square, AlertCircle } from "lucide-react";
+import { useNavigate, useOutletContext, useLocation } from "react-router-dom"; // 🎯 引入 useLocation 來獲取路由攜帶的狀態
 // 🎯 修正引用：依據您的目錄結構，正確指向 styles 資料夾下的 guide.css
 import "../styles/guide.css";
 
@@ -27,6 +27,7 @@ const getSupportedAudioMimeType = (): string => {
 
 export default function GuidePage() {
   const navigate = useNavigate();
+  const location = useLocation(); // 🎯 宣告 location 監聽路由狀態
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const context = useOutletContext<any>();
@@ -34,6 +35,8 @@ export default function GuidePage() {
 
   const [searchText, setSearchText] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  // 🎯 調整型態：支援普通字串或 { zh, en } 雙語物件
+  const [errorToast, setErrorToast] = useState<string | { zh: string; en: string } | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -52,6 +55,23 @@ export default function GuidePage() {
       document.body.style.height = originalHeight;
     };
   }, []);
+
+  // 🎯 偵測並讀取從其他頁面（如分析失敗或找不到景點）跳轉回來的雙語錯誤提示
+  useEffect(() => {
+    if (location.state?.errorMsg) {
+      setErrorToast(location.state.errorMsg);
+      // 🎯 顯示後立即清除 Router 歷史狀態，防止房客重新整理頁面時錯誤重複跳出
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
+
+  // 🎯 設定 4 秒後自動關閉橫幅
+  useEffect(() => {
+    if (errorToast) {
+      const timer = setTimeout(() => setErrorToast(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorToast]);
 
   // 🎯 處理照片上傳與相機拍完照
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,20 +213,52 @@ export default function GuidePage() {
             });
           } catch (error) {
             console.error("錄音檔轉 WAV 失敗：", error);
-            alert("錄音檔轉 WAV 失敗，請重新錄音。");
+            // 🎯 改為雙語物件
+            setErrorToast({
+              zh: "錄音檔分析失敗，請重新錄音。",
+              en: "Audio analysis failed, please record again."
+            });
           }
         };
 
         mediaRecorder.start();
         setIsRecording(true);
       } catch (err) {
-        alert(translations.voiceError[currentLang]);
+        // 🎯 改為傳入雙語字典
+        setErrorToast(translations.voiceError);
       }
     }
   };
 
   return (
     <main className="guide-page">
+      {/* 🎯 自訂高雅 Toast UI 橫幅：依據當前 currentLang 動態解析中英字串 */}
+      {errorToast && (
+        <div className="luxury-toast">
+          <AlertCircle size={18} style={{ color: "#10b981" }} />
+          <span>
+            {typeof errorToast === "string" 
+              ? errorToast 
+              : (errorToast[currentLang] || errorToast.zh)
+            }
+          </span>
+          <button
+            onClick={() => setErrorToast(null)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "rgba(255, 255, 255, 0.6)",
+              cursor: "pointer",
+              fontSize: "18px",
+              marginLeft: "10px",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* 隱藏的實體上傳 Input (支援相機拍照 capture) */}
       <input 
         type="file" 
