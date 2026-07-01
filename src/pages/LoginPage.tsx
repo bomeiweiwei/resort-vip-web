@@ -41,19 +41,6 @@ function LoginPage() {
         })
       );
 
-      // 核心：嘗試在進入 Loading 頁面時請求全螢幕
-      const requestFullScreen = () => {
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) {
-          elem.requestFullscreen().catch(() => {
-            // 若被阻擋，靜默處理，不影響 Loading 顯示
-          });
-        } else if ((elem as any).webkitRequestFullscreen) {
-          (elem as any).webkitRequestFullscreen();
-        }
-      };
-      
-      //requestFullScreen();
       navigate("/assistant");
     } catch (error) {
       console.error(error);
