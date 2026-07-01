@@ -53,7 +53,7 @@ function LoginPage() {
       <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-logo">V</div>
 
-        <h1>RESORT VIP</h1>
+        <h1>綠舞・智行領航員</h1>
         <p>尊榮旅客服務入口</p>
 
         <label>

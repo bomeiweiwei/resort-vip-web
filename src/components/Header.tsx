@@ -25,7 +25,7 @@ function Header({ title, currentLang, onLanguageChange }: HeaderProps) {
         <div>
           <h1>{title}</h1>
           <span className="mobile-header-subtitle">
-            RESORT VIP
+            {currentLang === "zh" ? "綠舞・智行領航員" : "Smart Travel Pilot"}
           </span>
         </div>
       </div>

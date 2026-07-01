@@ -6,11 +6,13 @@ import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 // 🎯 匯入統一管理的 API 函數 (指向相對路徑 src/apis/guideApi.ts)
 import { analyzeGuideInput } from "../apis/guideApi";
 import "../styles/guide.css";
+import "../styles/assistant.css"; // 🎯 匯入包含思考動畫與語音播放條樣式的 CSS
 
 type ChatMessage = {
   id: number;
   role: "assistant" | "user";
   text: string;
+  audioBase64?: string; // 🎯 儲存語音二進制，以便單獨重播
 };
 
 type GuideAnalysisResult = {
@@ -139,16 +141,11 @@ const translations = {
   ttsBlock: { zh: "語音自動播放已被阻擋，請手動點擊 Play。", en: "Audio auto-play blocked. Please click play to listen." },
 };
 
-/**
- * 🎯 景點圖片解析器
- * 優先採用後端 Python 回傳之圖片路徑，若無則精準 fallback。
- */
 const toGuideImageUrl = (backendImageUrl?: string): string => {
   const imageUrl = (backendImageUrl || "").trim();
 
   if (!imageUrl) return "";
 
-  // 後端若回傳完整網址或 data URL，直接使用。
   if (
     imageUrl.startsWith("http://") ||
     imageUrl.startsWith("https://") ||
@@ -157,17 +154,14 @@ const toGuideImageUrl = (backendImageUrl?: string): string => {
     return imageUrl;
   }
 
-  // 後端若已經回傳 /api/guide/images/...，不要再補一次 /api。
   if (imageUrl.startsWith("/api/")) {
     return imageUrl;
   }
 
-  // 後端若回傳 /guide/images/...，前端才補上 /api。
   if (imageUrl.startsWith("/")) {
     return `/api${imageUrl}`;
   }
 
-  // 後端若回傳 guide/images/...，補成 /api/guide/images/...
   return `/api/${imageUrl}`;
 };
 
@@ -209,10 +203,15 @@ export default function GuideResultPage() {
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false); // 頂部主導覽語音播放狀態
   const [isRecording, setIsRecording] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
 
-  // 🎯 自訂 Toast 錯誤狀態，用來取代不安全的原生 alert()
+  // 🎯 參考 AssistantPage 的語音播放相關狀態
+  const [playingMessageId, setPlayingMessageId] = useState<number | null>(null); // 當前播放中的 Chat 訊息 ID
+  const [isChatAudioPaused, setIsChatAudioPaused] = useState(false); // Chat 語音是否暫停
+  const [chatProgress, setChatProgress] = useState(0); // Chat 語音播控進度百分比 (0-100)
+
   const [errorToast, setErrorToast] = useState<string | null>(null);
 
   const mainAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -221,23 +220,23 @@ export default function GuideResultPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  // 用於 Web 底端對話自動滑動定位的錨點
   const chatListEndRef = useRef<HTMLDivElement | null>(null);
-
-  // React 專利：用 messagesRef 鎖定對話，防止非同步 MediaRecorder 閉包抓到舊狀態
   const messagesRef = useRef<ChatMessage[]>([]);
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
 
-  // 🎯 Toast 顯示 3 秒後自動隱藏
+  // Toast 顯示 3 秒後自動隱藏
   useEffect(() => {
     if (errorToast) {
       const timer = setTimeout(() => setErrorToast(null), 3000);
       return () => clearTimeout(timer);
     }
   }, [errorToast]);
+
+  // 🎯 核心防禦：計算全域是否有任何音軌正在發聲
+  const isAnyAudioPlaying = isPlaying || (playingMessageId !== null && !isChatAudioPaused);
 
   useEffect(() => {
     if (!backendResult) {
@@ -247,6 +246,7 @@ export default function GuideResultPage() {
 
     setMessages([{ id: 1, role: "assistant", text: backendResult.guideMessage }]);
 
+    // 清空舊語音
     if (mainAudioRef.current) {
       mainAudioRef.current.pause();
       mainAudioRef.current.onplay = null;
@@ -265,7 +265,15 @@ export default function GuideResultPage() {
       audio.onpause = () => setIsPlaying(false);
       audio.onended = () => setIsPlaying(false);
 
-      // 不自動播放。只準備語音，讓使用者按播放按鈕。
+      // 🎯 進入頁面立即挑戰自動播放主景點語音
+      audio.play()
+        .then(() => {
+          setIsPlaying(true);
+        })
+        .catch((err) => {
+          console.warn("語音自動播放被瀏覽器阻擋，需等待使用者互動:", err);
+          setIsPlaying(false);
+        });
     }
 
     return () => {
@@ -274,7 +282,7 @@ export default function GuideResultPage() {
     };
   }, [backendResult, navigate]);
 
-  // 智慧滾動對策：Web 滾動內層，Mobile 滾動視窗
+  // 智慧滾動對策
   useEffect(() => {
     if (window.innerWidth >= 1024) {
       chatListEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -283,22 +291,74 @@ export default function GuideResultPage() {
     }
   }, [messages]);
 
-  const playChatSpeech = (audioBase64?: string) => {
+  // 🎯 播放特定的 Chat Bubble 語音回覆（支援暫停其他語音、監聽 timeupdate 進度與 ended 狀態）
+  const playChatSpeech = (messageId: number, audioBase64?: string) => {
     if (!audioBase64) return;
 
-    chatAudioRef.current?.pause();
-
+    // 1. 先暫停主導覽語音
     if (mainAudioRef.current && !mainAudioRef.current.paused) {
       mainAudioRef.current.pause();
+      setIsPlaying(false);
+    }
+
+    // 2. 暫停先前播放的 Chat 語音
+    if (chatAudioRef.current) {
+      chatAudioRef.current.pause();
+      chatAudioRef.current = null;
     }
 
     const nextAudio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
     chatAudioRef.current = nextAudio;
+    setPlayingMessageId(messageId);
+    setIsChatAudioPaused(false);
+    setChatProgress(0);
 
-    nextAudio.play().catch((e) => console.log("Chat audio play failed:", e));
+    nextAudio.ontimeupdate = () => {
+      if (nextAudio.duration) {
+        setChatProgress((nextAudio.currentTime / nextAudio.duration) * 100);
+      }
+    };
+
+    nextAudio.onended = () => {
+      chatAudioRef.current = null;
+      setPlayingMessageId(null);
+      setIsChatAudioPaused(false);
+      setChatProgress(0);
+    };
+
+    nextAudio.onerror = (e) => {
+      console.error("Chat TTS 播放失敗:", e);
+      chatAudioRef.current = null;
+      setPlayingMessageId(null);
+      setIsChatAudioPaused(false);
+      setChatProgress(0);
+    };
+
+    nextAudio.play().catch((e) => {
+      console.error("Chat audio play failed:", e);
+      chatAudioRef.current = null;
+      setPlayingMessageId(null);
+      setIsChatAudioPaused(false);
+    });
   };
 
-  // 🎯 播放 / 暫停導遊 TTS 語音
+  // 🎯 點擊 Chat 泡泡播放/暫停 Toggle
+  const toggleChatPlayPause = (messageId: number, audioBase64: string) => {
+    if (playingMessageId === messageId && chatAudioRef.current) {
+      if (isChatAudioPaused) {
+        chatAudioRef.current.play();
+        setIsChatAudioPaused(false);
+      } else {
+        chatAudioRef.current.pause();
+        setIsChatAudioPaused(true);
+      }
+      return;
+    }
+    // 播放新的語音
+    playChatSpeech(messageId, audioBase64);
+  };
+
+  // 🎯 播放 / 暫停頂部大導覽 TTS 語音
   const togglePlay = () => {
     if (!mainAudioRef.current) {
       setErrorToast("語音導覽尚未準備完成，請稍候再試。");
@@ -308,7 +368,14 @@ export default function GuideResultPage() {
     if (isPlaying) {
       mainAudioRef.current.pause();
     } else {
-      chatAudioRef.current?.pause();
+      // 播放主語音時，先暫停與清空 Chat 泡泡的語音
+      if (chatAudioRef.current) {
+        chatAudioRef.current.pause();
+        setPlayingMessageId(null);
+        setIsChatAudioPaused(false);
+        setChatProgress(0);
+      }
+
       mainAudioRef.current
         .play()
         .then(() => setIsPlaying(true))
@@ -332,13 +399,14 @@ export default function GuideResultPage() {
 
     setMessages(currentHistory);
     setMessage("");
+    setIsThinking(true);
 
     try {
       const data = await analyzeGuideInput({
         text,
         attractionTitle: backendResult?.title || "未知景點",
         language: currentLang,
-        history: JSON.stringify(currentHistory), // 將包含最新訊息的歷史對話轉 JSON 發送
+        history: JSON.stringify(currentHistory),
       });
 
       setMessages((prev) => [
@@ -347,20 +415,28 @@ export default function GuideResultPage() {
           id: Date.now() + 1,
           role: "assistant",
           text: data.guideMessage,
+          // 🎯 文字輸入：不附帶 audioBase64 也不會自動播放音檔
         },
       ]);
-
-      playChatSpeech(data.audio_base64);
     } catch (err: any) {
       console.error("Send message error:", err);
       const backendErrorMsg = err.response?.data?.detail;
       setErrorToast(backendErrorMsg || "發送訊息失敗，請稍後再試。");
+    } finally {
+      setIsThinking(true);
+      setTimeout(() => setIsThinking(false), 300); // 縮短或立即結束
     }
   };
 
   // 語音追問切換
   const toggleRecording = async (e: React.MouseEvent) => {
     e.preventDefault();
+
+    // 🎯 核心防呆機制：若當前正在播放語音，且此時不是處於錄音狀態，拒絕使用者開始錄音
+    if (isAnyAudioPlaying && !isRecording) {
+      setErrorToast("正在播放語音中，請先暫停播放再進行錄音。");
+      return;
+    }
 
     if (isRecording) {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -372,6 +448,7 @@ export default function GuideResultPage() {
       return;
     }
 
+    // 啟動錄音前先極致防禦性暫停所有可能正在播放的音軌
     if (mainAudioRef.current) mainAudioRef.current.pause();
     if (chatAudioRef.current) chatAudioRef.current.pause();
 
@@ -393,6 +470,7 @@ export default function GuideResultPage() {
 
       mediaRecorder.onstop = async () => {
         const userMsgId = Date.now();
+        const replyMsgId = userMsgId + 1;
         const historyBeforeVoice = [...messagesRef.current];
 
         const userVoicePlaceholder: ChatMessage = {
@@ -402,6 +480,7 @@ export default function GuideResultPage() {
         };
 
         setMessages([...historyBeforeVoice, userVoicePlaceholder]);
+        setIsThinking(true);
 
         try {
           const audioType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm";
@@ -418,12 +497,11 @@ export default function GuideResultPage() {
             { type: "audio/wav" }
           );
 
-          // 這裡送出的 voice 已經是真正的 WAV：audio/wav、PCM、16000 Hz、16-bit、Mono。
           const data = await analyzeGuideInput({
             voice: audioFile,
             attractionTitle: backendResult?.title || "未知景點",
             language: currentLang,
-            history: JSON.stringify(historyBeforeVoice), // 發送此音檔之前的對話歷史給後端
+            history: JSON.stringify(historyBeforeVoice),
           });
 
           setMessages((prev) =>
@@ -434,17 +512,26 @@ export default function GuideResultPage() {
                   : msg
               )
               .concat({
-                id: Date.now() + 1,
+                id: replyMsgId,
                 role: "assistant",
                 text: data.guideMessage,
+                audioBase64: data.audio_base64, // 🎯 語音輸入：將 base64 儲存起來供 UI 渲染控制條
               })
           );
 
-          playChatSpeech(data.audio_base64);
+          // 🎯 語音輸入：自動播放回覆語音，並展開控制條
+          if (data.audio_base64) {
+            playChatSpeech(replyMsgId, data.audio_base64);
+          }
         } catch (err: any) {
           console.error(err);
           const backendErrorMsg = err.response?.data?.detail;
-          setErrorToast(backendErrorMsg || "語音分析失敗，請稍後再試。");
+          setErrorToast(
+            backendErrorMsg || 
+            (currentLang === "zh" ? "發送訊息失敗，請稍後再試。" : "Failed to send message, please try again later.")
+          );
+        } finally {
+          setIsThinking(false);
         }
       };
 
@@ -465,70 +552,14 @@ export default function GuideResultPage() {
       style={{
         display: "flex",
         flexDirection: "column",
-        minHeight: "100vh",
-        paddingBottom: "150px",
+        height: "100dvh", 
+        overflow: "hidden", 
       }}
     >
-      {/* 🎯 CSS 內嵌樣式表：Web 狀態優化，而絕對不改動手機版原有外觀樣式 */}
-      <style>{`
-        @media (min-width: 1024px) {
-          .guide-result-page {
-            position: relative !important;
-            height: calc(100vh - 85px) !important;
-            min-height: auto !important;
-            padding-bottom: 0 !important;
-            overflow: hidden !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
-          .guide-chat-list {
-            flex: 1 !important;
-            overflow-y: auto !important;
-            padding-bottom: 120px !important;
-          }
-          .guide-chat-input-area {
-            position: absolute !important;
-            bottom: 24px !important;
-            left: 24px !important;
-            right: 24px !important;
-            width: auto !important;
-            background-color: transparent !important;
-            z-index: 50 !important;
-          }
-          .guide-chat-input-wrap {
-            max-width: 800px !important;
-            margin: 0 auto !important;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
-            border: 1px solid #edf2f7 !important;
-            background-color: #ffffff !important;
-          }
-        }
-      `}</style>
-
-      {/* 🎯 自訂 Toast 橫幅 UI：高雅、精緻，符合豪華渡假村風格 */}
+      {/* Toast UI 保持在上方 */}
       {errorToast && (
-        <div
-          style={{
-            position: "absolute",
-            top: "24px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            backgroundColor: "#1e293b",
-            color: "#fff",
-            padding: "12px 24px",
-            borderRadius: "30px",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3)",
-            zIndex: 9999,
-            fontSize: "14px",
-            fontWeight: "500",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          <AlertCircle size={18} style={{ color: "#f59e0b" }} />
+        <div className="luxury-toast">
+          <AlertCircle size={18} style={{ color: "#10b981" }} />
           <span>{errorToast}</span>
           <button
             onClick={() => setErrorToast(null)}
@@ -547,22 +578,11 @@ export default function GuideResultPage() {
         </div>
       )}
 
-      <section
-        className="guide-result-hero"
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, var(--dark-slate) 100%), url(${heroImageUrl})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <button
-          type="button"
-          className="guide-restart-button"
-          onClick={() => navigate("/guide")}
-        >
+      {/* Hero 區塊與音訊卡片：設定 flex-shrink: 0 確保不被壓縮 */}
+      <section className="guide-result-hero" style={{ flexShrink: 0, backgroundImage: `linear-gradient(180deg, rgba(30, 41, 59, 0.4) 0%, var(--dark-slate) 100%), url(${heroImageUrl})` }}>
+        <button type="button" className="guide-restart-button" onClick={() => navigate("/guide")}>
           {translations.retake[currentLang]}
         </button>
-
         <div className="guide-result-info">
           <h1>{currentTitle}</h1>
           <div className="guide-result-location">
@@ -572,34 +592,54 @@ export default function GuideResultPage() {
         </div>
       </section>
 
-      <section className="guide-audio-card">
+      <section className="guide-audio-card" style={{ flexShrink: 0 }}>
         <button type="button" className="guide-audio-button" onClick={togglePlay}>
-          {isPlaying ? <Pause size={22} /> : <Play size={22} />}
+          {isPlaying ? (
+            <Pause size={22} style={{ display: 'block', color: 'inherit' }} />
+          ) : (
+            <Play size={22} style={{ display: 'block', color: 'inherit' }} />
+          )}
         </button>
-
         <div className="guide-audio-track">
-          <div
-            className="guide-audio-progress"
-            style={{ width: isPlaying ? "85%" : "0%" }}
-          />
+          <div className="guide-audio-progress" style={{ width: isPlaying ? "85%" : "0%" }} />
         </div>
       </section>
 
-      <section className="guide-chat-list" style={{ flexGrow: 1, paddingBottom: "20px" }}>
+      {/* 聊天列表：設定 flex-grow: 1 讓它自動佔滿中間所有剩餘空間 */}
+      <section className="guide-chat-list" style={{ flexGrow: 1, overflowY: "auto", paddingBottom: "20px" }}>
         {messages.map((item) => (
-          <div
-            key={item.id}
-            className={
-              item.role === "user"
-                ? "guide-chat-row guide-chat-row-user"
-                : "guide-chat-row guide-chat-row-assistant"
-            }
-          >
+          <div key={item.id} className={item.role === "user" ? "guide-chat-row guide-chat-row-user" : "guide-chat-row guide-chat-row-assistant"}>
             <div className="guide-chat-bubble">
               {item.role === "assistant" ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {item.text}
-                </ReactMarkdown>
+                <>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.text}</ReactMarkdown>
+                  
+                  {/* 🎯 語音回覆的泡泡：顯示與禮賓管家同款的「暫停/播放」介面進度條 */}
+                  {item.audioBase64 && (
+                    <div className="audio-playback-bar" style={{ marginTop: "12px" }}>
+                      <button
+                        type="button"
+                        className="playback-toggle"
+                        onClick={() => toggleChatPlayPause(item.id, item.audioBase64!)}
+                        title={playingMessageId === item.id && !isChatAudioPaused ? "暫停語音" : "播放語音"}
+                      >
+                        {playingMessageId === item.id && !isChatAudioPaused ? (
+                          <Pause size={14} />
+                        ) : (
+                          <Play size={14} />
+                        )}
+                      </button>
+                      <div className="playback-track">
+                        <div
+                          className="playback-progress"
+                          style={{
+                            width: `${playingMessageId === item.id ? chatProgress : 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
               ) : (
                 item.text
               )}
@@ -607,48 +647,74 @@ export default function GuideResultPage() {
           </div>
         ))}
 
-        {/* 用於 Web 獨立滾動的錨點 */}
+        {/* 思考中動畫 */}
+        {isThinking && (
+          <div className="guide-chat-row guide-chat-row-assistant">
+            <div className="guide-chat-bubble thinking-bubble">
+              <span>🤖 正在思考</span>
+              <div className="thinking-assistant-dots">
+                <div className="dot"></div>
+                <div className="dot"></div>
+                <div className="dot"></div>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={chatListEndRef} />
       </section>
 
+      {/* 底部輸入區 */}
       <section
         className="guide-chat-input-area"
         style={{
-          position: "fixed",
-          bottom: "65px",
-          left: 0,
+          flexShrink: 0,
           width: "100%",
-          zIndex: 99,
           backgroundColor: "#ffffff",
+          padding: "16px",
+          paddingBottom: "env(safe-area-inset-bottom, 16px)",
+          borderTop: "1px solid #e2e8f0"
         }}
       >
-        <div className="guide-chat-input-wrap">
+        <div 
+          className="guide-chat-input-wrap" 
+          style={{ 
+            display: "flex", 
+            gap: "8px", 
+            alignItems: "center",
+            width: "100%",      
+            boxSizing: "border-box" 
+          }}
+        >
           <input
             type="text"
             placeholder={translations.placeholder[currentLang]}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && !isRecording && handleSend()}
+            disabled={isRecording}
+            style={{ 
+              flex: 1, 
+              minWidth: 0, 
+              border: "none", 
+              outline: "none" 
+            }}
           />
-
-          {/* 麥克風按鈕：單擊 onClick 進行錄音狀態切換 */}
-          <button
-            type="button"
-            className={`guide-mic-button ${isRecording ? "recording" : ""}`}
+          {/* 🎯 錄音防呆：當任何語音 (頂部大音軌或聊天音軌) 正在播放時，禁用按鈕且點擊會觸發 Toast 防護 */}
+          <button 
+            type="button" 
+            className={`guide-mic-button ${isRecording ? "recording" : ""} ${(isAnyAudioPlaying && !isRecording) ? "disabled" : ""}`} 
             onClick={toggleRecording}
+            disabled={isThinking || (isAnyAudioPlaying && !isRecording)}
+            style={{ flexShrink: 0, opacity: (isAnyAudioPlaying && !isRecording) ? 0.4 : 1 }}
           >
-            {isRecording ? (
-              <Square size={16} style={{ color: "#ef4444" }} />
-            ) : (
-              <Mic size={18} />
-            )}
+            {isRecording ? <Square size={16} style={{ color: "#ef4444" }} /> : <Mic size={18} />}
           </button>
-
-          <button
-            type="button"
-            className="guide-send-button"
-            onClick={handleSend}
-            disabled={!message.trim()}
+          <button 
+            type="button" 
+            className="guide-send-button" 
+            onClick={handleSend} 
+            disabled={!message.trim() || isRecording || isThinking}
+            style={{ flexShrink: 0 }}
           >
             <Send size={18} />
           </button>
