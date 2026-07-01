@@ -6,12 +6,12 @@ import type { CustomerProfile } from "../types/auth";
 // 1. 將選單標籤改為中英雙語結構
 const menuItems = [
   {
-    label: { zh: "智能幫手", en: "Assistant" },
+    label: { zh: "禮賓管家", en: "Smart Butler" },
     path: "/assistant",
     icon: MessageSquare,
   },
   {
-    label: { zh: "行程推薦", en: "Itinerary" },
+    label: { zh: "尊榮行程", en: "VIP Journey" },
     path: "/itinerary",
     icon: CalendarDays,
   },
@@ -21,7 +21,7 @@ const menuItems = [
     icon: Camera,
   },
   {
-    label: { zh: "景點地圖", en: "Map" },
+    label: { zh: "全域領航", en: "Wide Pilot" },
     path: "/google-map",
     icon: Map,
   },
@@ -62,7 +62,7 @@ function Sidebar({ currentLang }: SidebarProps) {
     <aside className="sidebar">
       <div className="brand-area">
         <div className="brand-logo">V</div>
-        <div className="brand-title">RESORT VIP</div>
+        <div className="brand-title">{currentLang === "zh" ? "綠舞・智行領航員" : "Smart Travel Pilot"}</div>
       </div>
 
       {/* 3. 訪客資訊區塊也支援雙語翻譯 */}

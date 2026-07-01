@@ -5,10 +5,13 @@ import Header from "../components/Header";
 
 // 1. 將對照表升級為中英雙語結構，並對齊你所有的頁面名稱
 const pageTitles: Record<string, { zh: string; en: string }> = {
-  "/assistant": { zh: "智能幫手", en: "Assistant" },
-  "/itinerary": { zh: "行程推薦", en: "Itinerary" },
-  "/guide": {     zh: "專屬導遊", en: "AI Guide" },
-  "/map": {       zh: "景點地圖", en: "Map" },
+  "/assistant": { zh: "禮賓管家", en: "Smart Butler" },
+  "/itinerary": { zh: "尊榮行程", en: " VIP Journey" },
+  "/guide": {     zh: "專屬導遊", en: "Pocket AI Guide" },
+  "/loading": {   zh: "專屬導遊", en: "Pocket AI Guide" },
+  "/result": {    zh: "專屬導遊", en: "Pocket AI Guide" },
+  "/map": {       zh: "全域領航", en: "Resort-Wide Pilot" },
+  "/google-map": {zh: "全域領航", en: "Resort-Wide Pilot" },
 };
 
 function MainLayout() {
@@ -18,7 +21,7 @@ function MainLayout() {
   const [currentLang, setCurrentLang] = useState<"zh" | "en">("zh");
 
   // 3. 自動根據路徑與語系抓出正確的標題字串
-  const titleObj = pageTitles[location.pathname] ?? { zh: "RESORT VIP", en: "RESORT VIP" };
+  const titleObj = pageTitles[location.pathname] ?? { zh: "專屬導遊", en: "Pocket AI Guide" };
   const currentTitle = titleObj[currentLang];
 
   // const isFullContentPage =

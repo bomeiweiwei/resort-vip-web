@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Mic, Send, Play, Pause } from "lucide-react";
+import { Mic, Send, Play, Pause, Square } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import {
   sendMsg as sendMsgApi,
@@ -15,7 +15,7 @@ import remarkGfm from "remark-gfm";
 // 多國語言字典
 const uiText = {
   welcomeMsg: {
-    zh: (name: string) => `尊榮的 ${name} 您好，我是您的專屬智能管家。請問有什麼我可以為您服務的？`,
+    zh: (name: string) => `尊榮的 ${name} 您好，我是您的專屬禮賓管家。請問有什麼我可以為您服務的？`,
     en: (name: string) => `Dear ${name}, I am your exclusive smart butler. How may I assist you today? `,
   },
   today: { zh: "今天", en: "Today" },
@@ -50,7 +50,6 @@ const uiText = {
     water: { zh: "需要多送兩瓶水", en: "Need 2 more bottles of water" },
     spa: { zh: "我想預約 SPA", en: "Book a SPA session" },
     dinner: { zh: "請推薦今晚餐廳", en: "Dinner restaurant recommendations" },
-    shuttle: { zh: "請幫我接駁車時間", en: "Shuttle bus schedule" }
   }
 };
 
@@ -479,9 +478,7 @@ function AssistantPage() {
           <button disabled={isSending || isRecording || isAudioPlaying} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
             {uiText.quickActions.dinner[currentLang]}
           </button>
-          <button disabled={isSending || isRecording || isAudioPlaying} onClick={() => setMessage(uiText.quickActions.shuttle[currentLang])}>
-            {uiText.quickActions.shuttle[currentLang]}
-          </button>
+
         </div>
 
         <div className="chat-input-box">
@@ -499,17 +496,24 @@ function AssistantPage() {
             disabled={isSending || isAudioPlaying}
             title={isRecording ? uiText.micStop[currentLang] : uiText.micStart[currentLang]}
           >
-            <Mic size={20} />
+            {/* 🎯 這裡使用了 Square，警告就會消失 */}
+            {isRecording ? (
+              <Square size={16} /> 
+            ) : (
+              <Mic size={18} />
+            )}
           </button>
 
           <button
             type="button"
-            className="send-button"
+            /* 🎯 邏輯：檢查 message.trim() 是否有內容，動態切換 active 類別 */
+            className={`send-button ${message.trim().length > 0 ? "active" : ""}`}
             onClick={sendMsg}
-            disabled={isSending || isRecording || isAudioPlaying}
+            /* 🎯 邏輯：當沒有內容時，強制 disabled 避免送出空訊息 */
+            disabled={isSending || isRecording || isAudioPlaying || message.trim().length === 0}
             title={uiText.send[currentLang]}
           >
-            <Send size={20} />
+            <Send size={14} />
           </button>
         </div>
       </div>

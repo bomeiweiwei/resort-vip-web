@@ -41,6 +41,19 @@ function LoginPage() {
         })
       );
 
+      // 核心：嘗試在進入 Loading 頁面時請求全螢幕
+      const requestFullScreen = () => {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().catch(() => {
+            // 若被阻擋，靜默處理，不影響 Loading 顯示
+          });
+        } else if ((elem as any).webkitRequestFullscreen) {
+          (elem as any).webkitRequestFullscreen();
+        }
+      };
+      
+      //requestFullScreen();
       navigate("/assistant");
     } catch (error) {
       console.error(error);
@@ -53,7 +66,7 @@ function LoginPage() {
       <form className="login-card" onSubmit={handleSubmit}>
         <div className="login-logo">V</div>
 
-        <h1>RESORT VIP</h1>
+        <h1>綠舞・智行領航員</h1>
         <p>尊榮旅客服務入口</p>
 
         <label>

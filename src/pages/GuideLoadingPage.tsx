@@ -67,16 +67,6 @@ export default function GuideLoadingPage() {
         navigate("/guide/result", { state: { analysisResult: result } });
       } catch (error: any) {
         console.error("Analysis failed:", error);
-        
-        // 🎯 捕捉後端 (FastAPI 404) 找不到景點時回傳的客製 detail 錯誤訊息
-        const backendErrorMsg = error.response?.data?.detail;
-        if (backendErrorMsg) {
-          alert(backendErrorMsg);
-        } else {
-          alert(translations.failed[currentLang]);
-        }
-        
-        // 🎯 失敗、找不到景點或非景點時，乾淨地引導旅客回到第一層（導遊首頁）
         navigate("/guide");
       }
     };
@@ -102,7 +92,7 @@ export default function GuideLoadingPage() {
     >
       <section className="guide-loading-content" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
         <div className="guide-loading-card" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-          <ImageIcon className="animate-pulse" size={44} style={{ color: "var(--primary-color, #f59e0b)" }} />
+          <ImageIcon className="animate-pulse" size={44} style={{ color: "var(--primary-color, #10b981)" }} />
         </div>
         <p style={{ fontSize: "15px", color: "#64748b", fontWeight: "500", margin: 0 }}>
           {translations.analyzing[currentLang]}
