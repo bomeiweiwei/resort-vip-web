@@ -724,3 +724,22 @@ html body .top-header .lang-switch-button:active,
 html body .lang-switch-button:active {
   transform: scale(0.94) !important;
 }
+
+/* ========================================= */
+/* 🚀 全螢幕狀態下的終極防禦樣式               */
+/* ========================================= */
+
+.app-shell:fullscreen {
+  width: 100vw !important;
+  height: 100dvh !important;
+  padding: 0 !important; /* 全螢幕時沒收外距，達到 100% 滿版 */
+  background-color: #000000 !important;
+}
+
+/* 針對 iOS / Safari Core 的全螢幕相容處理 */
+.app-shell:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100dvh !important;
+  padding: 0 !important;
+  background-color: #000000 !important;
+}

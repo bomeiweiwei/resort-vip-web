@@ -55,11 +55,11 @@ html:has(.guide-result-page), body:has(.guide-result-page) {
   width: 100%;
   max-width: 500px;
   margin: 0 auto;
-  padding: 40px 24px 16px;
+  padding: 80px 24px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* 這裡會將所有剩餘空間推到上下兩端 */
   text-align: center;
 }
 
@@ -73,7 +73,8 @@ html:has(.guide-result-page), body:has(.guide-result-page) {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-top: 16px;    /* 🎯 補上一點頂部與 Header 的優雅微距 */
+  margin-bottom: 24px; /* 🎯 稍微縮緊大圓圈與文字標題的距離 */
   border: 4px solid #ffffff;
   box-shadow: var(--shadow-md), inset 0 2px 8px rgba(0, 0, 0, 0.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -109,15 +110,15 @@ html:has(.guide-result-page), body:has(.guide-result-page) {
 }
 
 .guide-hero h2 {
-  margin: 0 0 12px;
+  margin: 0 0 8px; /* 🎯 縮減標題與副標的距離 */
+  font-size: 28px; /* 🎯 標題稍微放大，看起來更有氣勢 */
   color: var(--dark-slate);
-  font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
 .guide-hero p {
-  margin: 0 0 32px;
+  margin: 0 0 24px; /* 🎯 縮減副標與拍照按鈕的間距 (從 32px 降到 24px) */
   color: var(--text-muted);
   font-size: 15px;
   line-height: 1.6;
