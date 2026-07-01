@@ -1,63 +1,69 @@
 /* ==========================================================================
-   AI 專屬語音導遊 - 全域變數與底色設定
+   🟢 第一部分：全域變數、基礎重設與高強度防禦鎖定
    ========================================================================== */
 :root {
-  --primary-gold: #f59e0b;
-  --primary-gold-hover: #d97706;
-  --dark-slate: #0f172a;
-  --medium-slate: #1e293b;
-  --light-slate: #f8fafc;
-  --text-main: #334155;
-  --text-muted: #64748b;
-  --border-color: #e2e8f0;
+  --primary-green: #10b981;        /* 綠舞經典品牌綠 */
+  --primary-green-hover: #059669;  /* 綠色懸浮高亮 */
+  --dark-slate: #0f172a;           /* 極深石板藍 */
+  --medium-slate: #1e293b;         /* 中度石板藍 */
+  --light-slate: #f8fafc;          /* 質感淺白底 */
+  --text-main: #334155;            /* 主文字顏色 */
+  --text-muted: #64748b;           /* 輔助文字顏色 */
+  --border-color: #e2e8f0;         /* 細緻灰邊框 */
   --shadow-sm: 0 4px 12px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 10px 25px rgba(15, 23, 42, 0.08);
   --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
 }
 
-/* 🎯 當主版面容器 .page-content 內渲染導遊頁面時，強制沒收外層 Padding 與滾動，由子組件自行填滿並自適應 */
+/* 確保所有導遊頁面的容器強制與系統視口 100% 貼合，徹底封鎖外層雜亂捲軸 */
+html:has(.guide-page), body:has(.guide-page),
+html:has(.guide-loading-page), body:has(.guide-loading-page),
+html:has(.guide-result-page), body:has(.guide-result-page) {
+  overflow: hidden !important;
+  height: 100dvh !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: fixed; /* 強制防止行動裝置橡皮筋回彈效應 */
+}
+
+/* 當主版面容器 .page-content 內渲染導遊頁面時，沒收外層 Padding 以填滿可用空間 */
 .page-content:has(.guide-page),
-.page-content:has(.guide-loading-page){
+.page-content:has(.guide-loading-page),
+.page-content:has(.guide-result-page) {
   overflow: hidden !important;
   padding: 0 !important;
   height: calc(100vh - 86px - 48px) !important;
 }
 
-@media (max-width: 768px) {
-  .page-content:has(.guide-page),
-  .page-content:has(.guide-loading-page) {
-    height: calc(100dvh - 64px - 76px) !important; /* 扣除 Header (64px) 與 Tabbar (76px) */
-    overflow: hidden !important;
-    padding: 0 !important;
-  }
-}
-
 /* ==========================================================================
-   1. 導遊首頁 (GuidePage)
+   🟢 第二部分：導遊首頁 (GuidePage) - 防跳動置中佈局
    ========================================================================== */
 .guide-page {
-  padding: 24px 16px calc(120px + env(safe-area-inset-bottom, 24px)) 16px !important;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  min-height: calc(100vh - 120px); 
   background-color: var(--light-slate);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
+/* 使用 flex: 1 彈性生長區，使相機大圓圈與文字在任何高度下都完美垂直置中 */
 .guide-hero {
+  flex: 1;
   width: 100%;
   max-width: 500px;
-  text-align: center;
+  margin: 0 auto;
+  padding: 80px 24px 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: auto;
-  margin-bottom: auto;
+  justify-content: center; /* 這裡會將所有剩餘空間推到上下兩端 */
+  text-align: center;
 }
 
-/* 膠囊/相機大圓圈：漸層外圈、陰影與脈衝 Hover */
+/* 膠囊/相機大圓圈：漸層外圈、立體內襯陰影與虛線環繞 */
 .guide-camera-circle {
   width: 180px;
   height: 180px;
@@ -67,11 +73,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 32px;
+  margin-top: 16px;    /* 🎯 補上一點頂部與 Header 的優雅微距 */
+  margin-bottom: 24px; /* 🎯 稍微縮緊大圓圈與文字標題的距離 */
   border: 4px solid #ffffff;
   box-shadow: var(--shadow-md), inset 0 2px 8px rgba(0, 0, 0, 0.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  cursor: pointer;
 }
 
 .guide-camera-circle::after {
@@ -80,7 +88,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 2px dashed var(--primary-gold);
+  border: 2px dashed var(--primary-green);
   opacity: 0.4;
   transform: scale(1.08);
   transition: transform 0.3s ease;
@@ -88,7 +96,7 @@
 
 .guide-camera-circle:hover {
   transform: translateY(-4px) scale(1.02);
-  color: var(--primary-gold);
+  color: var(--primary-green);
   box-shadow: var(--shadow-lg);
 }
 
@@ -101,23 +109,23 @@
   transform: scale(0.96);
 }
 
-.guide-hero h1 {
-  margin: 0 0 12px;
+.guide-hero h2 {
+  margin: 0 0 8px; /* 🎯 縮減標題與副標的距離 */
+  font-size: 28px; /* 🎯 標題稍微放大，看起來更有氣勢 */
   color: var(--dark-slate);
-  font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 
 .guide-hero p {
-  margin: 0 0 32px;
+  margin: 0 0 24px; /* 🎯 縮減副標與拍照按鈕的間距 (從 32px 降到 24px) */
   color: var(--text-muted);
   font-size: 15px;
   line-height: 1.6;
   max-width: 360px;
 }
 
-/* 上傳/拍攝按鈕 */
+/* 豪華上傳/拍攝按鈕 */
 .guide-upload-button {
   border: none;
   border-radius: 999px;
@@ -144,24 +152,26 @@
   transform: translateY(1px) scale(0.96);
 }
 
-/* 預設狀態首頁下方的輸入框容器：保持純透明底，防與結果頁衝突 */
+/* 首頁底部輸入框容器：保持乾淨與定位穩定 */
 .guide-home-input-container {
   width: 100%;
   max-width: 500px;
-  margin-top: auto;
-  padding: 16px 0;
+  margin: 0 auto;
+  padding: 16px;
   background-color: transparent;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
-   2. 導遊載入中頁 (GuideLoadingPage)
+   🟢 第三部分：導遊載入頁 (GuideLoadingPage) - 科技律動感
    ========================================================================== */
 .guide-loading-page {
-  min-height: calc(100vh - 80px);
+  width: 100%;
   background: var(--dark-slate);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .guide-loading-content {
@@ -171,24 +181,24 @@
   gap: 28px;
 }
 
-/* 載入大卡：高亮橘框與科技掃描呼吸燈 */
+/* 載入卡片：科技掃描呼吸燈與微晶格邊框 */
 .guide-loading-card {
   width: 180px;
   height: 180px;
   border-radius: 24px;
   background: var(--medium-slate);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  color: var(--primary-gold);
+  border: 1px solid rgba(16, 185, 129, 0.35); /* 採用品牌綠半透明邊框 */
+  color: var(--primary-green);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.35);
   animation: loadingPulse 2s infinite ease-in-out;
 }
 
-/* 模擬相機自動掃描雷射光束 */
+/* 模擬相機自動雷射掃描線 */
 .guide-loading-card::before {
   content: '';
   position: absolute;
@@ -196,7 +206,7 @@
   left: 0;
   width: 100%;
   height: 3px;
-  background: linear-gradient(90deg, transparent, var(--primary-gold), transparent);
+  background: linear-gradient(90deg, transparent, var(--primary-green), transparent);
   animation: scanBeam 2.5s infinite linear;
 }
 
@@ -209,29 +219,30 @@
 }
 
 /* ==========================================================================
-   3. 導覽結果與對話頁 (GuideResultPage)
+   🟢 第四部分：導覽結果對話頁 (GuideResultPage) - 嚴密視窗比例排版
    ========================================================================== */
 .guide-result-page {
-  min-height: calc(100vh - 80px);
-  background: var(--light-slate);
-  display: flex;
-  flex-direction: column;
+  height: 100% !important;
+  width: 100%;
+  display: flex !important;
+  flex-direction: column !important;
+  background-color: var(--light-slate);
+  overflow: hidden !important; 
 }
 
-/* 頂部景點卡片橫幅：漸層、高亮標籤 */
+/* 頂部景點卡片橫幅：深色網格漸層遮罩 */
 .guide-result-hero {
   height: 200px;
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.7) 0%, var(--dark-slate) 100%),
-              url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%231e293b"/></svg>');
   background-size: cover;
   background-position: center;
   position: relative;
-  padding: 0 20px;
+  padding: 0 24px;
   display: flex;
   align-items: flex-end;
+  box-sizing: border-box;
 }
 
-/* 重拍按鈕 */
+/* 重拍按鈕：磨砂玻璃 */
 .guide-restart-button {
   position: absolute;
   top: 16px;
@@ -239,7 +250,7 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
   color: #ffffff;
   padding: 6px 14px;
   font-size: 12px;
@@ -249,7 +260,7 @@
 }
 
 .guide-restart-button:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.25);
   border-color: #ffffff;
 }
 
@@ -260,22 +271,24 @@
 
 .guide-result-info h1 {
   margin: 0 0 6px;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.01em;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .guide-result-location {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #94a3b8;
+  color: #cbd5e1;
   font-size: 13px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
-/* 語音導覽卡 (Audio Track) */
+/* 語音導覽卡 (頂部大 Audio Track 卡片) */
 .guide-audio-card {
-  margin: -16px 16px 20px;
+  margin: -16px 20px 16px;
   min-height: 68px;
   background: #ffffff;
   border-radius: 16px;
@@ -287,25 +300,26 @@
   position: relative;
   z-index: 2;
   border: 1px solid rgba(226, 232, 240, 0.8);
+  box-sizing: border-box;
 }
 
 .guide-audio-button {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border: none;
   border-radius: 50%;
-  background: var(--primary-gold);
+  background: var(--primary-green);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
 }
 
 .guide-audio-button:hover {
-  background: var(--primary-gold-hover);
+  background: var(--primary-green-hover);
   transform: scale(1.05);
 }
 
@@ -329,13 +343,15 @@
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 語音問答對話清單 (Chat List) */
+/* 語音問答對話清單 (Chat List) - 精準獨立滾動區 */
 .guide-chat-list {
-  flex: 1;
-  padding: 12px 16px calc(100px + env(safe-area-inset-bottom, 16px));
+  flex: 1 !important; 
+  overflow-y: auto !important;
+  padding: 16px 20px !important;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
   background-color: var(--light-slate);
 }
 
@@ -352,16 +368,16 @@
   justify-content: flex-end;
 }
 
-/* 氣泡樣式：白底灰字，使用者深色底 */
+/* 氣泡樣式：系統雅白，房客深色 */
 .guide-chat-bubble {
-  max-width: 85%;
+  max-width: 80%;
   background: #ffffff;
   color: var(--text-main);
   border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: 16px;
-  padding: 12px 16px;
-  font-size: 14px;
-  line-height: 1.5;
+  padding: 14px 18px;
+  font-size: 14.5px;
+  line-height: 1.6;
   box-shadow: var(--shadow-sm);
   word-wrap: break-word;
 }
@@ -394,27 +410,6 @@
   color: #ffffff;
 }
 
-.guide-chat-bubble h1,
-.guide-chat-bubble h2,
-.guide-chat-bubble h3 {
-  margin: 10px 0 6px;
-  font-size: 15px;
-  line-height: 1.4;
-  color: var(--dark-slate);
-}
-
-.guide-chat-bubble h1:first-child,
-.guide-chat-bubble h2:first-child,
-.guide-chat-bubble h3:first-child {
-  margin-top: 0;
-}
-
-.guide-chat-bubble hr {
-  border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 10px 0;
-}
-
 .guide-chat-row-assistant .guide-chat-bubble {
   border-bottom-left-radius: 4px;
 }
@@ -427,17 +422,16 @@
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 
-/* 黏性底部輸入框區域 (Sticky Input) */
+/* 黏性/固定置底輸入框區域 (Sticky Input Area) */
 .guide-chat-input-area {
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
   background: #ffffff;
   border-top: 1px solid var(--border-color);
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 12px));
-  z-index: 10;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 12px)) !important;
+  box-sizing: border-box;
 }
 
-/* 膠囊式輸入框外圍 */
+/* 膠囊式輸入框外圍襯底 */
 .guide-chat-input-wrap {
   background-color: #f8fafc;
   border: 1px solid var(--border-color);
@@ -445,13 +439,14 @@
   padding: 4px 6px 4px 16px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.01);
   transition: border-color 0.2s, background-color 0.2s;
+  box-sizing: border-box;
 }
 
 .guide-chat-input-wrap:focus-within {
-  border-color: var(--primary-gold);
+  border-color: var(--primary-green);
   background-color: #ffffff;
 }
 
@@ -460,7 +455,7 @@
   border: none;
   background: transparent;
   outline: none;
-  font-size: 14px;
+  font-size: 14.5px;
   color: var(--dark-slate);
   padding: 8px 0;
 }
@@ -469,37 +464,46 @@
   color: var(--text-muted);
 }
 
-/* 語音按鈕 */
+/* 🎯 麥克風與發送控制按鈕：統一設定為完美的 40px * 40px */
 .guide-mic-button {
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 8px;
+  width: 40px;                     /* 🎯 錄音按鈕寬度：40px */
+  height: 40px;                    /* 🎯 錄音按鈕高度：40px */
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
-.guide-mic-button:hover {
+.guide-mic-button:hover:not(:disabled) {
   color: var(--dark-slate);
   background-color: #f1f5f9;
 }
 
 .guide-mic-button.recording {
-  background-color: rgba(234, 88, 12, 0.1);
-  animation: pulseRecording 1.2s infinite alternate;
+  color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.15) !important;
+  animation: pulseRecording 1.2s infinite alternate !important;
 }
 
-/* 發送按鈕 */
+.guide-mic-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .guide-send-button {
-  background-color: var(--dark-slate);
+  background-color: #10b981;
   color: #ffffff;
   border: none;
-  width: 36px;
-  height: 36px;
+  width: 40px;                     /* 🎯 送出按鈕寬度：40px */
+  height: 40px;                    /* 🎯 送出按鈕高度：40px */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -507,10 +511,11 @@
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .guide-send-button:hover:not(:disabled) {
-  background-color: var(--primary-gold);
+  background-color: var(--primary-green-hover);
   transform: scale(1.05);
 }
 
@@ -525,8 +530,48 @@
 }
 
 /* ==========================================================================
-   動畫與響應式微調
+   🎯 第五部分：全域豪華 Toast 提示框樣式 - 終極置中與自動折行防禦
    ========================================================================== */
+.luxury-toast {
+  position: fixed !important;             /* 強制相對於螢幕視窗（Viewport）絕對定位 */
+  top: 32px !important;                   /* 頂部保留優雅呼吸比率 */
+  left: 50% !important;                   /* 定位在視窗水平中央 */
+  transform: translateX(-50%) !important; /* 精確對稱置中 */
+  background-color: #1e293b !important;   /* 奢華渡假村深石板藍底色 */
+  color: #ffffff !important;              /* 白色文字 */
+  padding: 16px 32px !important;          /* 加厚版面，更具大器質感 */
+  border-radius: 999px !important;        /* 正圓藥丸膠囊角 */
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35) !important; /* 飄浮質感投影 */
+  z-index: 9999 !important;               /* 最頂層定位防遮擋 */
+  font-size: 15px !important;             
+  font-weight: 600 !important;            
+  display: flex !important;
+  align-items: center !important;         
+  justify-content: center !important;     
+  text-align: center !important;          
+  gap: 12px !important;                   
+  border: 1.5px solid rgba(16, 185, 129, 0.45) !important; /* 高貴品牌半透綠框 */
+  width: max-content !important;          
+  max-width: 90vw !important;             /* 行動端寬度安全鎖定 */
+  white-space: normal !important;         /* 長英文或繁中自動優雅折行 */
+  line-height: 1.5 !important;            
+  animation: toastFadeIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important; /* 躍入動畫 */
+}
+
+/* ==========================================================================
+   🟢 第六部分：核心關鍵影格動畫 (Keyframes)
+   ========================================================================== */
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 @keyframes loadingPulse {
   0%, 100% {
     transform: scale(1);
@@ -534,7 +579,7 @@
   }
   50% {
     transform: scale(1.03);
-    box-shadow: 0 15px 35px rgba(245, 158, 11, 0.15);
+    box-shadow: 0 15px 35px rgba(16, 185, 129, 0.2); /* 綠光脈衝 */
   }
 }
 
@@ -545,15 +590,15 @@
 }
 
 @keyframes pulseRecording {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.3); }
-  100% { transform: scale(1.1); box-shadow: 0 0 8px 2px rgba(234, 88, 12, 0); }
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.35); }
+  100% { transform: scale(1.08); box-shadow: 0 0 8px 2px rgba(239, 68, 68, 0); }
 }
 
 /* ==========================================================================
-   📱 響應式手機版佈局與 Header 終極鎖定防禦
+   🟢 第七部分：📱 響應式手機版佈局與 Header 終極防禦
    ========================================================================== */
 @media (max-width: 768px) {
-  /* 鎖定全域視窗，防止橡皮筋回彈與底層拉動造成的 Header 偏移 */
+  /* 手機版：完全固定背景，防止任何方向的多餘彈性滾動 */
   html, body, #root, .app-shell {
     position: fixed !important;
     top: 0 !important;
@@ -563,7 +608,7 @@
     overflow: hidden !important;
   }
 
-  /* 🎯 將頂部導覽列固定在手機螢幕最上方，永不因滾動而消失 */
+  /* 固定系統導覽 Header 在頂部，避免被視窗重算推走 */
   .top-header {
     position: fixed !important;
     top: 0 !important;
@@ -577,22 +622,32 @@
     display: flex !important;
   }
 
-  /* 配合固定 Header 往下位移，防止內容被遮擋 */
+  /* 主控版往下補償 64px，防 Header 遮擋 */
   .main-panel {
     padding-top: 64px !important;
     height: 100dvh !important;
     overflow: hidden !important;
   }
 
-  /* 精確限制 page-content 的高度，確保只有其內部獨立滾動 */
+  /* 在手機版下，將導覽結果頁（GuideResultPage）的外層容器 page-content 同步設定為 overflow: hidden */
+  /* 這能防止整個頁面產生多餘滾動條，確保輸入框永遠被固定在 bottom-navbar 緊上方 */
+  .page-content:has(.guide-page),
+  .page-content:has(.guide-loading-page),
+  .page-content:has(.guide-result-page) {
+    height: calc(100dvh - 64px - 76px) !important; /* 扣除頂部 Header (64px) 與底部 Tabbar (76px) */
+    overflow: hidden !important; /* 強制關閉外層容器滾動 */
+    padding: 0 !important;       /* 清空邊距以達到 100% 精準貼合 */
+  }
+
+  /* 精確分派可用視窗高度予 page-content（非導遊相關頁面則保持滾動） */
   .page-content {
-    height: calc(100dvh - 64px - 76px) !important; /* 扣除 Header (64px) 與 Tabbar (76px) */
+    height: calc(100dvh - 64px - 76px) !important; 
     overflow-y: auto !important;
     padding-top: 12px !important;
     padding-bottom: 24px !important;
   }
 
-  /* 原有手機版導遊首頁尺寸微調 */
+  /* 手機版導遊首頁相機與內容微調 */
   .guide-page {
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 16px)) !important;
   }
@@ -605,6 +660,7 @@
   .guide-hero h1 { font-size: 22px; }
   .guide-hero p { font-size: 13px; padding: 0 12px; }
   .guide-upload-button { font-size: 14px; padding: 12px 24px; }
+  
   .guide-loading-card { width: 140px; height: 140px; }
   .guide-result-hero { height: 160px; }
   
@@ -614,7 +670,7 @@
   }
 
   .guide-chat-list {
-    padding: 12px 12px calc(80px + env(safe-area-inset-bottom, 12px));
+    padding: 12px 12px calc(80px + env(safe-area-inset-bottom, 12px)) !important;
   }
 
   .guide-chat-row-assistant .guide-chat-bubble,
@@ -622,5 +678,5 @@
     max-width: 88%;
   }
 
-  .guide-chat-bubble { font-size: 13px; }
+  .guide-chat-bubble { font-size: 13.5px; }
 }

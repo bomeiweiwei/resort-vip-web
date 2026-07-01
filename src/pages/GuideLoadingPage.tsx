@@ -8,7 +8,11 @@ import "../styles/guide.css";
 const translations = {
   analyzing: { zh: "辨識分析景點資訊...", en: "Identifying attraction info..." },
   noData: { zh: "未接收到任何請求內容，請重新嘗試。", en: "No data received. Please try again." },
-  failed: { zh: "景點辨識分析失敗，請重新嘗試。", en: "Attraction analysis failed. Please try again." }
+  // 🎯 統一的中英雙語「查無景點」精緻提醒
+  failed: { 
+    zh: "系統未辨識到相符的景點，請重新嘗試。", 
+    en: "No matching attraction found. Please try again." 
+  }
 };
 
 export default function GuideLoadingPage() {
@@ -48,8 +52,9 @@ export default function GuideLoadingPage() {
 
     // 防呆：如果沒有任何輸入源，退回導遊首頁
     if (!file && !textQuery && !voiceBlob) {
-      alert(translations.noData[currentLang]);
-      navigate("/guide");
+      navigate("/guide", {
+        state: { errorMsg: translations.noData }
+      });
       return;
     }
 
@@ -63,21 +68,27 @@ export default function GuideLoadingPage() {
           language: currentLang
         });
 
-        // 成功拿到後端 analysis 結果後，帶著資料前往結果頁 (GuideResultPage)
+        // 🎯 核心攔截：如果 API 回傳成功，但 success 欄位為 false，或是根本沒有導遊回覆文字 (guideMessage)
+        // 這代表 AI 在綠舞渡假村資料庫中查無此景點
+        if (result && (result.success === false || !result.guideMessage)) {
+          navigate("/guide", { 
+            state: { 
+              errorMsg: translations.failed // 🎯 傳遞雙語錯誤物件，回退至首頁顯示
+            } 
+          });
+          return;
+        }
+
+        // 成功辨識到景點，帶著完整資料前往結果頁 (GuideResultPage)
         navigate("/guide/result", { state: { analysisResult: result } });
       } catch (error: any) {
         console.error("Analysis failed:", error);
-        
-        // 🎯 捕捉後端 (FastAPI 404) 找不到景點時回傳的客製 detail 錯誤訊息
-        const backendErrorMsg = error.response?.data?.detail;
-        if (backendErrorMsg) {
-          alert(backendErrorMsg);
-        } else {
-          alert(translations.failed[currentLang]);
-        }
-        
-        // 🎯 失敗、找不到景點或非景點時，乾淨地引導旅客回到第一層（導遊首頁）
-        navigate("/guide");
+        // 🎯 網路或後端異常時，一律帶回首頁並彈出雙語錯誤提醒
+        navigate("/guide", { 
+          state: { 
+            errorMsg: translations.failed 
+          } 
+        });
       }
     };
 
@@ -102,7 +113,7 @@ export default function GuideLoadingPage() {
     >
       <section className="guide-loading-content" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "16px" }}>
         <div className="guide-loading-card" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-          <ImageIcon className="animate-pulse" size={44} style={{ color: "var(--primary-color, #f59e0b)" }} />
+          <ImageIcon className="animate-pulse" size={44} style={{ color: "var(--primary-color, #10b981)" }} />
         </div>
         <p style={{ fontSize: "15px", color: "#64748b", fontWeight: "500", margin: 0 }}>
           {translations.analyzing[currentLang]}

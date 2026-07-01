@@ -3,8 +3,8 @@
    ========================================================================== */
 
 :root {
-  --vip-gold: #f59e0b;
-  --vip-gold-dark: #d97706;
+  --vip-gold: #10b981;
+  --vip-gold-dark: #059669;
   --vip-dark: #111827;
   --vip-dark-card: #1f2937;
   --vip-light-bg: #f3f4f6;
@@ -68,8 +68,8 @@
 }
 
 .itinerary-filter:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(16, 185, 129, 0.4);;
+  border-color: rgba(16, 185, 129, 0.4);
 }
 
 .itinerary-filter:focus-within {
@@ -94,7 +94,7 @@
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
   background-repeat: no-repeat !important;
   background-position: right 0 center !important;
   padding-right: 20px;
@@ -109,17 +109,28 @@
    🚀 奢華橫式卡片排版、分類靠右與文字微調樣式
    ========================================================================== */
 .timeline {
-  padding: 0 16px 0 31px;
+  padding: 0 15px 0 31px;
+  position: relative;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #dbe3ef;
 }
 
 .timeline-row {
   position: relative;
-  padding-bottom: 16px;
+  padding-bottom: 20px;
 }
-/* 🎯 修正：讓橘色圈圈 (timeline-dot) 精準定位在左側線條上 */
+
 .timeline-dot {
   position: absolute;
-  left: -24px; /* 🚀 相對擴展回左側線條的精確交點 (40px 留白扣除置中位移) */
+  left: -21px; /* 🚀 相對擴展回左側線條的精確交點 (40px 留白扣除置中位移) */
   top: 50%;    /* 🚀 置於橫式卡片的正垂直中央 */
   transform: translateY(-50%); /* 完美的垂直居中對齊 */
   width: 10px;
@@ -127,9 +138,50 @@
   background-color: var(--vip-gold); /* 您的專屬亮眼琥珀橘 */
   border: 2px solid #ffffff; /* 加上白色外圈，讓與線條交會時更精緻 */
   border-radius: 50%;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2); /* 淡淡的橘色光暈奢華感 */
-  z-index: 3;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
 }
+
+.timeline-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px 28px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+}
+
+.timeline-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #10b981;
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.timeline-card h3 {
+  margin: 0 0 12px;
+  color: #111827;
+  font-size: 22px;
+}
+
+.timeline-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 16px;
+}
+
+.empty-card {
+background: #ffffff;
+  border-left: 4px solid #10b981; /* 側邊亮色提示線 */
+  padding: 20px;
+  border-radius: 12px;
+  color: #64748b;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin: 20px 0;
+}
+
+
 
 .timeline-card.luxury-horizontal {
   display: flex;
@@ -146,8 +198,9 @@
 }
 
 .timeline-card.luxury-horizontal:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(17, 24, 39, 0.06);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(197, 168, 128, 0.12);
+  border-color: var(--vip-gold);
 }
 
 /* 橫式圖片外框 */
@@ -210,7 +263,7 @@
   font-weight: 700;
   color: var(--vip-text-main);
   background: var(--vip-light-bg);
-  padding: 2px 8px;
+  padding: px 8px;
   border-radius: 6px;
 }
 
@@ -219,7 +272,7 @@
   font-size: 10.5px; /* 字體縮小 */
   font-weight: 700;
   color: var(--vip-gold);
-  background: rgba(245, 158, 11, 0.08);
+  background: rgba(16, 185, 129, 0.08);
   padding: 2px 7px;
   border-radius: 5px;
   margin-left: auto; /* 核心技巧：將元素推至最右側 */
@@ -306,13 +359,15 @@
 }
 
 .modal-meta-badge.time {
-  background: #f3f4f6;
-  color: var(--vip-dark);
+  color: var(--vip-gold-dark);
+  font-size: 20px;
+  padding:0px 0px;
+
 }
 
 .modal-meta-badge.pref {
-  background: rgba(245, 158, 11, 0.1);
-  color: var(--vip-gold-dark);
+  background: rgba(16, 185, 129, 0.1); 
+  color: var(--vip-gold-dark); /* 或 #10b981 */
 }
 
 .luxury-detail-modal h2 {
@@ -374,16 +429,22 @@
   background: #ffffff;
   border: 1px solid var(--vip-border);
   border-radius: 30px;
-  padding: 6px 12px;
+  padding: 4px 10px; /* 🚀 縮小上下與左右外距，微調緊湊度 */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  gap: 8px; /* 🌟 確保橫向間距穩定 */
+  width: 100%; /* 🌟 確保父容器寬度撐滿 */
+  box-sizing: border-box; /* 🌟 防止 padding 撐破外寬 */
 }
 
 .feedback-input-wrap input {
-  flex: 1;
+  flex: 1 1 0%; /* 🌟 核心防禦：輸入框具備高彈性自適應伸縮，且預設基準寬度為 0 */
+  min-width: 0px; /* 🌟 核心防禦：防止 Flex 子項目預設最小寬度阻礙其縮小進而擠壓按鈕 */
+  width: 100%;
   border: none;
   outline: none;
-  padding: 8px;
+  padding: 8px 6px; /* 🚀 縮減左右內距，使輸入可視空間極致加寬 */
   font-size: 14px;
+  order: 1; /* 🚀 輸入框現在直接貼齊最左側，享有最寬闊的可視空間 */
 }
 
 /* 錄音中 placeholder 紅字閃爍 */
@@ -393,18 +454,36 @@
   animation: pulseListen 1.5s infinite alternate;
 }
 
-/* 麥克風錄音按鈕 */
+/* ==========================================================================
+   🎙️ 🌟 麥克風與長按選單組合容器 (Mic Container & Popover)
+   ========================================================================== */
+.mic-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  order: 2; /* 🚀 視覺位置排在右側第二位 */
+  flex-shrink: 0;
+}
+
+/* 麥克風錄音按鈕 - 縮小優化 */
 .mic-button {
   background: transparent;
   border: none;
   color: #9ca3af;
   cursor: pointer;
-  padding: 8px;
+  width: 32px; /* 🚀 從原先自動大小縮小至固定 32px 寬度 */
+  height: 32px; /* 🚀 固定 32px 高度，釋放寬度給輸入框 */
+  padding: 0; /* 🚀 移除 padding 避免推開空間 */
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0; /* 🌟 核心防禦：防止被輸入框彈性擴展時擠小 */
+  -webkit-user-select: none; /* 🚀 防止長按時觸發系統文字複製選取 */
+  user-select: none;
+  -webkit-touch-callout: none; /* 🚀 停用 iOS 的長按預覽選單彈出 */
 }
 
 .mic-button:hover {
@@ -416,6 +495,91 @@
   background-color: rgba(239, 68, 68, 0.1);
   color: #ef4444;
   animation: pulseRecordCircle 1.2s infinite alternate;
+}
+
+/* 🚀 長按麥克風彈出的高質感語系選單 (Popover Menu) */
+.lang-popover-menu {
+  position: absolute;
+  bottom: 44px; /* 🌟 置於麥克風按鈕的正上方 */
+  left: 50%;
+  transform: translateX(-50%) scale(0.9);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--vip-border);
+  border-radius: 16px;
+  padding: 6px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 110;
+  min-width: 90px;
+}
+
+.lang-popover-menu.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) scale(1);
+}
+
+/* 🚀 選單按鈕項目樣式 */
+.lang-popover-item {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--vip-text-muted);
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.lang-popover-item:hover {
+  background: var(--vip-light-bg);
+  color: var(--vip-text-main);
+}
+
+.lang-popover-item.active {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--vip-gold-dark);
+}
+
+/* 送出按鈕 - 縮小優化 */
+.send-button {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  border: none;
+  width: 32px; /* 🚀 從 40px 縮小至 32px 寬度，爭取更多文字輸入框寬度 */
+  height: 32px; /* 🚀 從 40px 縮小至 32px 高度 */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0; /* 🌟 核心防禦：確保送出按鈕永遠維持 100% 黃金寬度不變形 */
+  order: 3; /* 🚀 視覺位置排在最右側第一位 */
+}
+
+.send-button:not(:disabled) {
+  background-color: #10b981;
+  color: #ffffff;
+}
+
+.send-button:not(:disabled):hover {
+background-color: var(--vip-gold-dark); /* 🌟 懸停時顏色加深，增加立體互動感 (#059669) */
+  transform: scale(1.05);                 /* 維持微放大的點擊暗示 */
+}
+
+.send-button:active:not(:disabled) {
+  transform: scale(0.92);
 }
 
 /* ==========================================================================
@@ -484,6 +648,25 @@
 
 .ai-spin {
   animation: spin 2s linear infinite;
+}
+
+/* 🌟 全域尊榮提示彈窗 (Luxury Toast) */
+.luxury-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: #ffffff;
+  border: 1px solid var(--vip-gold);
+  padding: 12px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9999;
+  font-weight: 600;
+  color: var(--vip-text-main);
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ==========================================================================
@@ -556,3 +739,4 @@
   from { transform: translateY(15px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
