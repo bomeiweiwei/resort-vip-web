@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useRef } from "react";
-import { CalendarDays, Mic, Send, Sparkles, X, Clock, Tag } from "lucide-react";
+import { CalendarDays, Mic, Send, Sparkles, X, Clock, Tag, Play, Pause } from "lucide-react";
 import { useOutletContext } from "react-router-dom";
 import { getExclusiveItinerary, submitFeedback } from "../apis/itineraryApi";
 import "../styles/Itinerary.css";
@@ -12,14 +12,16 @@ import type {
 const uiText = {
   heroTitle: { zh: "專屬行程規劃", en: "Itinerary Planning" },
   heroDesc: { zh: "基於您的入住資訊為您量身打造。", en: "Tailor-made based on your check-in information and preferences." },
-  placeholder: { zh: "輸入調整需求", en: "Long press the recording to choose a language..." },
+  placeholder: { zh: "輸入調整需求...", en: "Long press the recording to choose a language..." },
   recordingPlaceholder: { zh: "正在聆聽語音中... ", en: "Listening..." },
   alertFailed: { zh: "意見提交失敗，詳細錯誤請見控制台 (F12)", en: "Submission failed, please check Console (F12)" },
   aiTitle: { zh: "AI 行程規劃師", en: "AI Itinerary Architect" },
   aiThinking: { zh: "正在為您重新規劃並調整行程安排", en: "Optimizing and adjusting your VIP schedule" },
+  audioPlay: { zh: "播放語音", en: "Play voice" },
+  audioPause: { zh: "暫停語音", en: "Pause voice" },
 };
 
-// 🚀 新增：分類標籤的多國語言字典
+// 🚀 分類標籤的多國語言字典
 const preferenceTranslation: Record<string, { zh: string; en: string }> = {
   "觀光園區": { zh: "觀光園區", en: "Attractions" },
   "在地文化": { zh: "在地文化", en: "Local Culture" },
@@ -28,9 +30,8 @@ const preferenceTranslation: Record<string, { zh: string; en: string }> = {
   "其他": { zh: "其他", en: "Others" }
 };
 
-// 🚀 新增：安全獲取翻譯標籤的 Helper 函式
+// 🚀 安全獲取翻譯標籤的 Helper 函式
 const getTranslatedPreference = (pref: string, lang: "zh" | "en") => {
-  // 如果在字典裡有找到對應的翻譯，就回傳該語系版本；如果找不到（例如意外的髒資料），就原樣顯示
   return preferenceTranslation[pref]?.[lang] || pref;
 };
 
@@ -49,10 +50,7 @@ const getStaticUrl = (url?: string) => {
 function ItineraryPage() {
   const { currentLang = "zh" } = useOutletContext<{ currentLang: "zh" | "en" }>();
   
-  // 🚀 recognitionRef 現在僅用來存放「當前活動中」的辨識對象，方便隨時強制中止
   const recognitionRef = useRef<any>(null);
-  
-  // 🚀 控制目前播放中的音訊物件，此 Ref 指向的 HTMLAudioElement 將永久復用，絕對不銷毀
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [itineraryList, setItineraryList] = useState<ItineraryDateGroup[]>([]);
@@ -65,32 +63,32 @@ function ItineraryPage() {
   const [aiStatus, setAiStatus] = useState<"idle" | "thinking" | "responded">("idle");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   
-  // 🚀 智慧語音語系狀態：預設繁體中文，切換為英文介面時將啟用長按切換
   const [speechLang, setSpeechLang] = useState("zh-TW");
-
-  // 🚀 長按選單顯示狀態與計時器管理
   const [showLangMenu, setShowLangMenu] = useState(false);
   const longPressTimer = useRef<any>(null);
   const isLongPressed = useRef(false);
 
   const [activeDetailItem, setActiveDetailItem] = useState<ItinerarySchedule | null>(null);
 
-  // 🚀 使用 useRef 追蹤 selectedDate 以防非同步 closure 讀到舊值
+  // 🚀 新增：音訊播放進度與狀態控制
+  const [aiAudioBase64, setAiAudioBase64] = useState<string | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [isAudioPaused, setIsAudioPaused] = useState(false);
+  const [playbackProgress, setPlaybackProgress] = useState(0);
+
   const selectedDateRef = useRef(selectedDate);
   useEffect(() => {
     selectedDateRef.current = selectedDate;
   }, [selectedDate]);
 
-  // 🚀 當切換介面語系時，智慧初始化預設的語音辨識語言
   useEffect(() => {
     if (currentLang === "zh") {
       setSpeechLang("zh-TW");
     } else {
-      setSpeechLang("en-US"); // 英文介面時預設辨識英文
+      setSpeechLang("en-US"); 
     }
   }, [currentLang]);
 
-  // 🚀 點擊頁面其他空白處時自動關閉語系選單
   useEffect(() => {
     const handleOutsideClick = () => {
       setShowLangMenu(false);
@@ -103,20 +101,29 @@ function ItineraryPage() {
     };
   }, [showLangMenu]);
 
-  // 🚀 iOS 專屬：使用者觸發事件同步解鎖 Audio 播放通道
+  // 🚀 核心需求：切換頁面 (Unmount) 時，強制暫停並清除音訊播放
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   const initAndUnlockIOSAudio = () => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
     }
-    const audio = audioRef.current;
     
-    // 如果目前音訊正處於暫停或尚未載入狀態，注入靜音 Wav 進行解鎖
-    if (audio.paused) {
+    // 只有在還沒有拿到 AI 音檔且音訊處於暫停時，才執行空 Wav 解鎖
+    if (audioRef.current.paused && !aiAudioBase64) {
+      const audio = audioRef.current;
       audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAAA";
       audio.play()
         .then(() => {
-          audio.pause(); // 播放成功後立刻暫停，等待真實語音 base64 寫入
-          console.log("📱 [iOS 語音防禦] 成功提前解鎖 iOS WebKit 音訊通道！");
+          audio.pause(); 
         })
         .catch((e) => {
           console.warn("⚠️ [iOS 語音防禦] 語音通道預解鎖失敗:", e);
@@ -124,7 +131,6 @@ function ItineraryPage() {
     }
   };
 
-  // 載入行程列表時允許指定 targetDate 來保持目前編輯的日期
   const fetchItinerary = async (targetDate?: string) => {
     const data = await getExclusiveItinerary();
     const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
@@ -157,7 +163,59 @@ function ItineraryPage() {
     fetchItinerary();
   }, []);
 
-  // 核心重構：封裝共用提交邏輯（支援手動點擊或語音自動發送）
+  // 🚀 封裝音訊播放邏輯與進度條綁定
+  const playAudio = (audioBase64: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const audioUrl = `data:audio/mp3;base64,${audioBase64}`;
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+
+    setIsAudioPlaying(true);
+    setIsAudioPaused(false);
+    setPlaybackProgress(0);
+
+    audio.ontimeupdate = () => {
+      if (audio.duration) {
+        setPlaybackProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.onended = () => {
+      setIsAudioPlaying(false);
+      setIsAudioPaused(false);
+      setPlaybackProgress(0);
+    };
+
+    audio.onerror = (e) => {
+      console.error("TTS 播放失敗:", e);
+      setIsAudioPlaying(false);
+      setIsAudioPaused(false);
+      setPlaybackProgress(0);
+    };
+
+    audio.play().catch((error) => {
+      console.warn("⚠️ 瀏覽器阻擋了自動語音播放，等待使用者點擊頁面互動後播放。", error);
+      setIsAudioPlaying(true);
+      setIsAudioPaused(true); // 自動被擋則設為暫停，讓使用者可以手動點擊
+    });
+  };
+
+  // 🚀 音訊播放與暫停切換
+  const togglePlayPause = () => {
+    if (!audioRef.current) return;
+    if (isAudioPaused || !isAudioPlaying) {
+      audioRef.current.play();
+      setIsAudioPlaying(true);
+      setIsAudioPaused(false);
+    } else {
+      audioRef.current.pause();
+      setIsAudioPaused(true);
+    }
+  };
+
   const executeSubmit = async (textToSend: string, targetDate: string) => {
     const text = textToSend.trim();
     if (!text) return;
@@ -166,8 +224,13 @@ function ItineraryPage() {
       setIsSubmitting(true);
       setAiStatus("thinking");
       setAiResponse(null);
+      
+      // 清空前一次的語音與播放狀態
+      setAiAudioBase64(null);
+      setIsAudioPlaying(false);
+      setIsAudioPaused(false);
+      setPlaybackProgress(0);
 
-      // 🚀 核心優化：只暫停音訊，絕不將 audioRef.current 設為 null！
       if (audioRef.current) {
         try {
           audioRef.current.pause();
@@ -176,7 +239,6 @@ function ItineraryPage() {
         }
       }
 
-      // 使用傳入的 targetDate 準確對接後端
       const result = await submitFeedback(text, targetDate, speechLang);
       
       if (result.success) {
@@ -185,28 +247,10 @@ function ItineraryPage() {
         setFeedback("");
 
         if (result.audio_base64) {
-          try {
-            console.log("🔊 收到專屬管家語音，準備播放...");
-            const audioUrl = `data:audio/mp3;base64,${result.audio_base64}`;
-
-            if (!audioRef.current) {
-              audioRef.current = new Audio();
-            }
-            
-            const audio = audioRef.current;
-            audio.src = audioUrl; // 僅抽換音訊來源，完美繞過 iOS 的嚴格防禦！
-            
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-              await playPromise;
-            }
-
-          } catch (audioError) {
-            console.warn("⚠️ 瀏覽器阻擋了自動語音播放，等待使用者點擊頁面互動後播放。", audioError);
-          }
+          setAiAudioBase64(result.audio_base64);
+          playAudio(result.audio_base64);
         }
 
-        // 成功後強制重新整理並切換到該目標日期，維持狀態不跳頁
         await fetchItinerary(targetDate);
         setSelectedDate(targetDate); 
 
@@ -223,6 +267,12 @@ function ItineraryPage() {
   };
 
   const startVoiceRecording = () => {
+    // 🚀 核心需求防護：語音播放時禁止同時錄音
+    if (isAudioPlaying && !isAudioPaused) {
+      setToastMsg(currentLang === "zh" ? "語音播放中，無法同時錄音" : "Cannot record while audio is playing");
+      return;
+    }
+
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
@@ -270,7 +320,6 @@ function ItineraryPage() {
         const transcript = event.results[0][0].transcript;
         setFeedback(transcript); 
         setIsRecording(false);
-        // executeSubmit(transcript, selectedDateRef.current);
         executeSubmit(transcript, selectedDateRef.current);
       };
 
@@ -311,44 +360,36 @@ function ItineraryPage() {
     }
   };
 
-  // 🚀 Pointer 下壓事件（相容於桌面滑鼠下壓與行動端觸控下壓）
   const handlePointerDown = (e: React.PointerEvent) => {
     isLongPressed.current = false;
     
-    // 只在英文介面下啟用長按切換語系選單
     if (currentLang === "en") {
       longPressTimer.current = setTimeout(() => {
         isLongPressed.current = true;
         setShowLangMenu(true);
         
-        // 如果裝置支援，觸發輕微震動回饋 (Haptic) 提高奢華互動感
         if (navigator.vibrate) {
           try {
             navigator.vibrate(50);
           } catch(e) {}
         }
-      }, 600); // 🚀 600ms 定義為精準長按
+      }, 600); 
     }
   };
 
-  // 🚀 Pointer 抬起或離開事件
   const handlePointerUpOrLeave = (e: React.PointerEvent) => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
     }
   };
 
-  // 🚀 麥克風點擊防誤觸邏輯
   const handleMicClick = (e: React.MouseEvent) => {
-    // 🌟 如果剛剛觸發了長按彈出選單，則直接阻擋本次 Click 事件，防止意外啟動錄音
     if (isLongPressed.current) {
       e.preventDefault();
       e.stopPropagation();
       isLongPressed.current = false;
       return;
     }
-    
-    // 正常單擊，啟動/暫停錄音
     startVoiceRecording();
   };
 
@@ -372,14 +413,12 @@ function ItineraryPage() {
         </div>
       </section>
 
-      {/* 橫式卡片排版線路 */}
       <section className="timeline">
         {filteredSchedules.map((item) => (
           <div key={`${item.time}-${item.title}`} className="timeline-row">
             <div className="timeline-dot" />
 
             <article className="timeline-card luxury-horizontal" onClick={() => setActiveDetailItem(item)}>
-              {/* 左側圖片 */}
               <div className="timeline-card-img-wrap">
                 <img
                   className="timeline-card-image"
@@ -391,7 +430,6 @@ function ItineraryPage() {
                 </div>
               </div>
 
-              {/* 右側文字內容 */}
               <div className="timeline-card-body">
                 <div className="card-body-header">
                   <span className="time-badge">{item.time}</span>
@@ -407,7 +445,6 @@ function ItineraryPage() {
         ))}
       </section>
 
-      {/* 整合奢華底部控置台 */}
       <section className="itinerary-feedback">
         <div className="feedback-input-wrap">
           <input
@@ -418,7 +455,6 @@ function ItineraryPage() {
             className={isRecording ? "listening-placeholder" : ""}
           />
 
-          {/* 🎙️ 🌟 麥克風與長按語系選單高質感元件 */}
           <div className="mic-container" onClick={(e) => e.stopPropagation()}>
             <button 
               className={`mic-button ${isRecording ? "recording" : ""}`} 
@@ -426,12 +462,13 @@ function ItineraryPage() {
               onPointerDown={handlePointerDown}
               onPointerUp={handlePointerUpOrLeave}
               onPointerLeave={handlePointerUpOrLeave}
-              style={{ touchAction: "none" }} // 🚀 阻擋 iOS 系統預設觸控回饋行為，使 PointerEvent 更靈敏
+              style={{ touchAction: "none" }}
+              // 🚀 核心防禦：如果正在播放 AI 音訊且未暫停，則強迫禁用麥克風按鈕防誤觸
+              disabled={isSubmitting || (isAudioPlaying && !isAudioPaused)}
             >
               <Mic size={18} />
             </button>
 
-            {/* 🚀 長按麥克風彈出的語系選擇選單 (Popover Menu) */}
             {currentLang === "en" && (
               <div className={`lang-popover-menu ${showLangMenu ? "show" : ""}`}>
                 <button 
@@ -491,14 +528,48 @@ function ItineraryPage() {
                   <span className="thinking-text">{uiText.aiThinking[currentLang]}</span>
                 </div>
               ) : (
-                <span>{aiResponse}</span>
+                <div className="ai-response-content">
+                  <p style={{ margin: 0 }}>{aiResponse}</p>
+                  
+                  {/* 🚀 新增：頂級奢華 AI 音訊控制進度條 */}
+                  {aiAudioBase64 && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', marginTop: '16px',
+                      padding: '10px 14px', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '50px',
+                      border: '1px solid rgba(245, 158, 11, 0.15)'
+                    }}>
+                      <button
+                        type="button"
+                        onClick={togglePlayPause}
+                        title={isAudioPlaying && !isAudioPaused ? uiText.audioPause[currentLang] : uiText.audioPlay[currentLang]}
+                        style={{
+                          background: 'var(--vip-gold, #f59e0b)',
+                          color: 'white', border: 'none', borderRadius: '50%',
+                          width: '32px', height: '32px', display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0,
+                          transition: 'transform 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        {isAudioPlaying && !isAudioPaused ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
+                      </button>
+                      <div style={{ flex: 1, height: '6px', background: '#e5e7eb', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{
+                          height: '100%', background: 'var(--vip-gold, #f59e0b)',
+                          width: `${playbackProgress}%`, transition: 'width 0.1s linear'
+                        }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
         )}
       </section>
 
-      {/* 頂級沉浸式行程完整內容彈窗 (Modal) */}
+      {/* 頂級沉浸式行程完整內容彈窗 */}
       {activeDetailItem && (
         <div className="luxury-lightbox-overlay" onClick={() => setActiveDetailItem(null)}>
           <div className="luxury-detail-modal" onClick={(e) => e.stopPropagation()}>
@@ -506,12 +577,10 @@ function ItineraryPage() {
               <X size={20} />
             </button>
             
-            {/* 上方完整滿版大圖 */}
             <div className="modal-hero-img-wrap">
               <img src={getStaticUrl(activeDetailItem.imageUrl || activeDetailItem.image_url)} alt={activeDetailItem.title} className="modal-hero-image" />
             </div>
 
-            {/* 下方無刪減完整資訊 */}
             <div className="modal-detail-body">
               <div className="modal-meta-row">
                 <div className="modal-meta-badge time"><Clock size={14} /><span>{activeDetailItem.time}</span></div>

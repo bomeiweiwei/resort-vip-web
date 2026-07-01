@@ -71,6 +71,8 @@ function AssistantPage() {
   const [playbackProgress, setPlaybackProgress] = useState(0); // 0-100
   const isAudioPlaying = playingMessageId !== null && !isAudioPaused;
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // 初始化歡迎訊息
   useEffect(() => {
     const customerProfileText = localStorage.getItem("customer_profile");
@@ -101,6 +103,16 @@ function AssistantPage() {
       });
     }
   }, [messages, isThinking]);
+
+  // ✨ 新增保護機制：當切換頁面（組件卸載）時，自動停止當前播放的語音
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   const downsampleBuffer = (
     buffer: Float32Array,
@@ -186,8 +198,6 @@ function AssistantPage() {
     });
     return result;
   };
-
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const playAudio = (messageId: number, audioBase64: string) => {
     if (audioRef.current) {
@@ -405,7 +415,6 @@ function AssistantPage() {
 
   return (
     <div className="assistant-page">
-      {/* ⚠️ 修正重點：把所有聊天訊息包在這個 div 裡面 */}
       <div ref={chatListRef} className="chat-list">
         <div className="chat-date">{uiText.today[currentLang]}</div>
 
@@ -465,7 +474,6 @@ function AssistantPage() {
           </div>
         )}
       </div>
-      {/* 聊天區塊結束 */}
 
       <div className="chat-input-area">
         <div className="quick-actions">
@@ -478,7 +486,6 @@ function AssistantPage() {
           <button disabled={isSending || isRecording || isAudioPlaying} onClick={() => setMessage(uiText.quickActions.dinner[currentLang])}>
             {uiText.quickActions.dinner[currentLang]}
           </button>
-
         </div>
 
         <div className="chat-input-box">
@@ -496,7 +503,6 @@ function AssistantPage() {
             disabled={isSending || isAudioPlaying}
             title={isRecording ? uiText.micStop[currentLang] : uiText.micStart[currentLang]}
           >
-            {/* 🎯 這裡使用了 Square，警告就會消失 */}
             {isRecording ? (
               <Square size={16} /> 
             ) : (
@@ -506,10 +512,8 @@ function AssistantPage() {
 
           <button
             type="button"
-            /* 🎯 邏輯：檢查 message.trim() 是否有內容，動態切換 active 類別 */
             className={`send-button ${message.trim().length > 0 ? "active" : ""}`}
             onClick={sendMsg}
-            /* 🎯 邏輯：當沒有內容時，強制 disabled 避免送出空訊息 */
             disabled={isSending || isRecording || isAudioPlaying || message.trim().length === 0}
             title={uiText.send[currentLang]}
           >

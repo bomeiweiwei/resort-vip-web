@@ -10,8 +10,8 @@ const translations = {
   noData: { zh: "未接收到任何請求內容，請重新嘗試。", en: "No data received. Please try again." },
   // 🎯 統一的中英雙語「查無景點」精緻提醒
   failed: { 
-    zh: "系統未辨識到相符的景點，請換個角度拍照或重新輸入試試。", 
-    en: "No matching attraction found. Please take another photo from a different angle or try typing again." 
+    zh: "系統未辨識到相符的景點，請重新嘗試。", 
+    en: "No matching attraction found. Please try again." 
   }
 };
 

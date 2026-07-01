@@ -279,29 +279,30 @@
 /* 操作按鈕 (麥克風 / 送出) */
 .icon-button,
 .send-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: none;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 40px !important; /* 🚀 統一設定為 40px */
+  height: 40px !important; /* 🚀 統一設定為 40px */
+  padding: 0 !important; /* 🛡️ 強制防禦：消除任何瀏覽器預設按鈕 padding */
+  box-sizing: border-box !important; /* 🛡️ 強制防禦：確保寬高計算模型完全等寬高 */
+  border-radius: 50% !important;
+  border: none !important;
   cursor: pointer;
   transition: all 0.2s ease;
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
 }
 
 /* 麥克風按鈕 - 融合在輸入框內 */
 .icon-button {
   background: transparent;
   color: #64748b;
-  width: 36px;
-  height: 36px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  /* 🚀 移除先前覆蓋的 36px 寬高，使其直接繼承 40px */
 }
 
 .icon-button:hover:not(:disabled) {
@@ -309,24 +310,24 @@
   color: #1e293b;
 }
 
+/* 🚀 修正重點：鎖定物理大小，僅漸變背景，不使用任何會造成尺寸膨脹的陰影或 scale 動畫 */
 .icon-button.recording {
-  color: #10b981; /* 綠色圖示 */
-  /* background-color: rgba(16, 185, 129, 0.1); 淡淡綠底 */
-  animation: pulseRecording 1.5s infinite;
-  background-color: rgba(234, 88, 12, 0.1);
-  animation: pulseRecording 1.2s infinite alternate;
+  color: #ef4444; /* 與行程一致的警示紅 */
+  background-color: rgba(239, 68, 68, 0.15); /* 淡淡紅底 */
+  animation: micBreathing 1.2s infinite alternate; /* 單純色彩淡入淡出動畫 */
+  transform: scale(1) !important; /* 🛡️ 強制鎖定不產生任何大小縮放 */
+  box-shadow: none !important; /* 🛡️ 強制移除外擴陰影 */
 }
 
 /* 送出按鈕 - 獨立的深色圓形按鈕 */
 .send-button {
   background-color: #e2e8f0; 
   color: #94a3b8;
-  width: 40px;
-  height: 40px;
   border-radius: 50%;
   border: none;
   cursor: not-allowed; /* 預設禁止點擊 */
   transition: all 0.2s ease;
+  /* 🚀 移除先前覆蓋的 40px 寬高，使其直接繼承基礎設定 */
 }
 
 /* 有內容時的狀態：綠色 (對應導遊頁的 primary-green) */
@@ -421,13 +422,15 @@
 
   .icon-button,
   .send-button {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    border: none;
+    width: 40px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    border: none !important;
     cursor: pointer;
   }
 
@@ -473,4 +476,14 @@
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
   70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* 🚀 移除 opacity 變化：僅溫和漸變 background-color，防止內部圖示線條因透明度改變而在視覺上產生大小縮放的錯覺 */
+@keyframes micBreathing {
+  0% { 
+    background-color: rgba(239, 68, 68, 0.1); 
+  }
+  100% { 
+    background-color: rgba(239, 68, 68, 0.28); 
+  }
 }

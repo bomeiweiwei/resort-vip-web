@@ -310,7 +310,7 @@ export default function GuidePage() {
             className={`guide-mic-button ${isRecording ? "recording" : ""}`}
             onClick={toggleRecording}
           >
-            {isRecording ? <Square size={16} /> : <Mic size={18} />}
+            {isRecording ? <Square size={16} style={{ color: "#ef4444" }} /> : <Mic size={18} />}
           </button>
 
           {/* 送出按鈕 */}
