@@ -48,7 +48,7 @@ a {
   justify-content: center;
   font-size: 28px;
   font-weight: 700;
-  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.35); /* 原 rgba(245, 158, 11, 0.35) */
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.35);
 }
 
 .brand-title {
@@ -99,7 +99,7 @@ a {
 .nav-item.active {
   background: #10b981; 
   color: white;
-  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.3); /* 原 rgba(245, 158, 11, 0.3) */
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.3);
 }
 
 .main-panel {
@@ -216,7 +216,7 @@ a {
 .login-card input:focus {
   outline: none;
   border-color: #10b981; 
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); /* 原 rgba(245, 158, 11, 0.18) */
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
 }
 
 .login-card button {
@@ -253,14 +253,11 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
-
   border: none;
   background: transparent;
-
   color: #475569;
   font-size: 16px;
   cursor: pointer;
-
   padding: 8px 12px;
   border-radius: 8px;
 }
@@ -283,13 +280,10 @@ a {
     left: 0;
     right: 0;
     bottom: 0;
-
     width: 100%;
     height: 76px;
-
     border-radius: 0;
     z-index: 100;
-
     display: flex;
     align-items: center;
     justify-content: center;
@@ -303,7 +297,6 @@ a {
   .side-nav {
     width: 100%;
     padding: 0 8px;
-
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 6px;
@@ -313,11 +306,9 @@ a {
     height: 60px;
     margin-bottom: 0;
     padding: 0;
-
     flex-direction: column;
     justify-content: center;
     gap: 4px;
-
     border-radius: 14px;
     font-size: 12px;
   }
@@ -330,7 +321,6 @@ a {
   .main-panel {
     width: 100%;
     height: 100vh;
-
     border-radius: 0;
     overflow: hidden;
   }
@@ -386,14 +376,12 @@ a {
   gap: 20px;
 }
 
-/* 讓圖標和文字併排並垂直居中 */
 .header-title-container {
   display: flex;
   align-items: center;
-  gap: 12px; /* 圖標與右側文字的間距 */
+  gap: 12px;
 }
 
-/* 圖標的圓形外圈背景（仿照你第一張圖的橘色質感） */
 .header-icon-wrapper {
   display: flex;
   align-items: center;
@@ -401,9 +389,9 @@ a {
   width: 40px;
   height: 40px;
   background-color: #10b981;
-  color: #ffffff;            /* 圖標顏色：白色 */
-  border-radius: 50%;        /* 完美正圓形 */
-  flex-shrink: 0;            /* 防止外圈被壓縮變形 */
+  color: #ffffff;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .mobile-header-subtitle {
@@ -556,17 +544,9 @@ a {
 }
 
 @keyframes recording-pulse {
-  0% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.15);
-  }
-
-  100% {
-    transform: scale(1);
-  }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 
 .send-button {
@@ -643,9 +623,9 @@ a {
 }
 
 .feedback-input-wrap {
-  background-color: #f8fafc; /* 淺灰色基底 */
+  background-color: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 24px; /* 膠囊狀輸入框 */
+  border-radius: 24px;
   padding: 4px 6px 4px 16px;
   display: flex;
   align-items: center;
@@ -688,13 +668,13 @@ a {
 }
 
 .send-button {
-  background-color: #0f172a; /* 配合深色主題的發送鈕 */
+  background-color: #0f172a;
   color: #ffffff;
   font-size: 0.9rem;
 }
 
 .voice-button:active, .send-button:active {
-  transform: scale(0.92); /* 點擊時的物理微縮回饋 */
+  transform: scale(0.92);
 }
 
 .thinking-dots::after {
@@ -703,49 +683,44 @@ a {
 }
 
 @keyframes dots {
-  0% {
-    content: "";
-  }
-
-  33% {
-    content: ".";
-  }
-
-  66% {
-    content: "..";
-  }
-
-  100% {
-    content: "...";
-  }
+  0% { content: ""; }
+  33% { content: "."; }
+  66% { content: ".."; }
+  100% { content: "..."; }
 }
 
-/* 🎯 語系切換按鈕高質感美化 */
-.lang-switch-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;                  /* 圖示和文字的精緻間距 */
-  background-color: #ffffff; /* 改為乾淨白底 */
-  color: #334155;            /* 深灰主字體色 */
-  border: 1px solid #e2e8f0; /* 加入細緻的淺灰邊框，呼應輸入框質感 */
-  padding: 6px 14px;         /* 稍微縮小內距，使其更緊湊精緻 */
-  border-radius: 999px;      /* 完美膠囊藥丸正圓角 */
-  font-size: 14px;           /* 標準小巧字體 */
-  font-weight: 600;          
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04); /* 加入極輕量的投影提升層次 */
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* ==========================================================================
+   🎯 語系切換按鈕 - 極致高規格綠色雅緻樣式表 (確保全局穩定，永不退色)
+   ========================================================================== */
+html body .top-header .lang-switch-button,
+html body .lang-switch-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;                  /* 圖示和文字的精緻微距 */
+  background-color: #f0fdf4 !important; /* 淡淡的優雅綠底色 */
+  color: #10b981 !important;            /* 主品牌綠色文字 */
+  border: 1px solid #10b981 !important; /* 邊框色：精緻綠線 */
+  padding: 6px 14px !important;         /* 高雅窄版比例 */
+  border-radius: 999px !important;      /* 完美膠囊藥丸正圓角 */
+  font-size: 14px !important;           
+  font-weight: 600 !important;          
+  cursor: pointer !important;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.06) !important; /* 精緻低透度微綠色陰影 */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* 懸停（Hover）時的微互動，讓使用者知道可以點擊 */
-.lang-switch-button:hover {
-  border-color: #10b981;
-  color: #10b981;
-  background-color: #f0fdf4; /* 淡淡的綠色背景 */
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+/* 懸停 (Hover) 狀態：高亮綠色邊框、實心綠底與白色文字 */
+html body .top-header .lang-switch-button:hover,
+html body .lang-switch-button:hover {
+  border-color: #059669 !important;     /* 懸停時深綠色邊框 */
+  color: #ffffff !important;            /* 變成純白字體 */
+  background-color: #10b981 !important; /* 變成實心綠底 */
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
 }
 
-/* 點擊 (Active) 狀態：實體物理縮放回饋 */
-.lang-switch-button:active {
-  transform: scale(0.95);
+/* 點擊 (Active) 狀態：物理彈性縮放反饋 */
+html body .top-header .lang-switch-button:active,
+html body .lang-switch-button:active {
+  transform: scale(0.94) !important;
 }
